@@ -5,8 +5,8 @@ Data: OpenDota /proMatches (finished maps) + Liquipedia MatchTicker via the pars
 import json, re, time, html, os, urllib.request, urllib.parse, datetime as dt, hashlib, unicodedata
 from collections import defaultdict
 ROOT=os.path.dirname(os.path.abspath(__file__)); OUT=os.path.join(ROOT,'site'); CACHE=os.path.join(ROOT,'cache')
-UA="NoSpoilDota/0.2 (https://unclouded77.github.io/nospoildota/; https://github.com/UnClouded77/nospoildota; non-commercial)"
-SITE="https://unclouded77.github.io/nospoildota/"
+UA="NoSpoilDota/0.2 (https://nospoildota.com/; https://github.com/UnClouded77/nospoildota; non-commercial)"
+SITE="https://nospoildota.com/"
 os.makedirs(OUT,exist_ok=True); os.makedirs(CACHE,exist_ok=True)
 e=html.escape
 def get(url,name,ttl=3600,data=None):
@@ -323,6 +323,7 @@ def build():
     open(f"{OUT}/newsletter.html","w").write(page("Newsletter","""<h1>What to watch: weekly spoiler-free email</h1><p>A free weekly email with the Dota 2 series worth watching and where to find the VODs. No winners, no scores, no spoilers, ever.</p>
 """+signup(False)+"<p class=tag>Free, one email a week, unsubscribe anytime. Powered by <a href='https://buttondown.com'>Buttondown</a>.</p>"))
     open(f"{OUT}/style.css","w").write(CSS); open(f"{OUT}/app.js","w").write(JS)
+    open(f"{OUT}/CNAME","w").write("nospoildota.com\n")
     stats={"opendota_maps":len(raw),"opendota_series":len(recent),"liquipedia_upcoming":len(up),"live":len(live),"upcoming_7d":len(soon),
            "merged_live":len(used),"tournaments":len(tours),"teams":len(tm),"tiers":{t:sum(1 for s in up if s['tier']==t) for t in (1,2,3,4)}}
     json.dump(stats,open(f"{OUT}/stats.json","w")); print(stats)
