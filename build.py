@@ -127,7 +127,11 @@ details.tbd{margin:6px 0;color:var(--mut);font-size:13px;border:1px dashed var(-
 form input[type=email]{padding:8px;border-radius:6px;border:1px solid var(--bd);background:#11141a;color:var(--fg);width:min(280px,100%)}form button{padding:8px 12px;border:1px solid var(--bd);border-radius:6px;background:#222733;color:var(--fg);cursor:pointer}
 .teamlist{columns:3 180px;padding:0;list-style:none}.teamlist li{padding:2px 0;break-inside:avoid}
 footer{color:var(--mut);font-size:12px;text-align:center;padding:24px 16px;border-top:1px solid var(--bd);margin-top:30px}
-@media(max-width:640px){.m{grid-template-columns:1fr}.m .when{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.m .when .rel{display:inline}.acts{justify-content:flex-start}main{padding:10px 12px}}"""
+.star{font:inherit;background:none;border:1px solid transparent;color:var(--mut);cursor:pointer;min-width:36px;min-height:36px;padding:0 6px;margin:-6px 0 -6px -6px;font-size:19px;line-height:1;border-radius:8px;vertical-align:middle}
+.star:hover{color:#ffc94d;border-color:var(--bd)}.star[aria-pressed=true]{color:#ffc94d}.star.big{font-size:15px;border-color:var(--bd);padding:6px 12px;margin:0 0 0 8px;display:inline-flex;gap:6px;align-items:center}.star.big[aria-pressed=true]{background:#3a2f10;border-color:#ffc94d}
+.m.fav{border-color:#ffc94d;background:linear-gradient(90deg,#2a2412,var(--card) 60%);box-shadow:inset 4px 0 0 #ffc94d}.m.fav .when .rel::before{content:"★ ";color:#ffc94d}li.fav a{color:#ffc94d}
+.vs+.star{margin-left:0}
+@media(max-width:640px){.star{min-width:44px;min-height:44px}.m{grid-template-columns:1fr}.m .when{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.m .when .rel{display:inline}.acts{justify-content:flex-start}main{padding:10px 12px}}"""
 JS=r"""(()=>{const now=Date.now()/1000,fmt=new Intl.DateTimeFormat([], {weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),
 tf=new Intl.DateTimeFormat([], {hour:'2-digit',minute:'2-digit'}),day=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()};
 function rel(ts,kind){const d=ts-now,a=Math.abs(d),dd=Math.round((day(ts*1000)-day(Date.now()))/864e5),t=tf.format(new Date(ts*1000));
@@ -141,14 +145,26 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('.reveal');if(b
  if(!r.hidden){r.hidden=true;b.textContent='Reveal result';b.setAttribute('aria-expanded','false')}else if(confirm('Show the result? This is a spoiler.')){r.hidden=false;b.textContent='Hide result';b.setAttribute('aria-expanded','true')}return}
  const w=ev.target.closest('[data-warn]');if(w&&!confirm('Heads up: '+w.dataset.warn+' search results and thumbnails often show the score or winner. Open anyway?'))ev.preventDefault();
  const c=ev.target.closest('.copy');if(c&&navigator.clipboard){navigator.clipboard.writeText(c.dataset.copy);c.textContent='copied'}});
+const FK='nsd-follow';let fol=new Set();try{fol=new Set(JSON.parse(localStorage.getItem(FK)||'[]'))}catch(_){}
+function paint(){document.querySelectorAll('[data-follow]').forEach(b=>{const on=fol.has(b.dataset.follow),n=b.getAttribute('aria-label').replace(/^(Unf|F)ollow /,'');
+ b.setAttribute('aria-pressed',on);b.setAttribute('aria-label',(on?'Unfollow ':'Follow ')+n);b.title=b.getAttribute('aria-label');b.firstChild.textContent=on?'★':'☆';const l=b.querySelector('.lbl');if(l)l.textContent=on?'Following':'Follow'});
+ document.querySelectorAll('[data-teams]').forEach(c=>c.classList.toggle('fav',c.dataset.teams.split(' ').some(t=>fol.has(t))));document.dispatchEvent(new Event('nsd-follow'))}
+document.addEventListener('click',ev=>{const b=ev.target.closest('[data-follow]');if(!b)return;ev.preventDefault();const k=b.dataset.follow;fol.has(k)?fol.delete(k):fol.add(k);
+ try{localStorage.setItem(FK,JSON.stringify([...fol]))}catch(_){}paint()});paint();
 const F=document.getElementById('filters');if(!F)return;
+const mine=F.querySelector('#mine'),ff=F.querySelector('#ffirst');try{mine.checked=localStorage.getItem('nsd-mine')==='1';ff.checked=localStorage.getItem('nsd-ffirst')==='1'}catch(_){}
+document.querySelectorAll('.m,details.tbd,.grp').forEach((el,i)=>el.dataset.i=i);
+function order(){document.querySelectorAll('.sect').forEach(sc=>{const sortk=el=>(ff.checked&&(el.classList.contains('fav')||el.querySelector('.fav'))?0:1e6)+(+el.dataset.i);
+ const gs=[...sc.querySelectorAll(':scope>.grp')];gs.sort((a,b)=>sortk(a)-sortk(b)).forEach(g=>sc.insertBefore(g,sc.querySelector(':scope>.empty')));
+ sc.querySelectorAll('.grp').forEach(g=>{const cs=[...g.querySelectorAll(':scope>.m')];const tb=g.querySelector(':scope>details');cs.sort((a,b)=>sortk(a)-sortk(b)).forEach(c=>g.insertBefore(c,tb))})})}
 const items=[...document.querySelectorAll('[data-tier]')],q=F.querySelector('input[type=search]');let saved=null;try{saved=localStorage.getItem('nsd-tier')}catch(_){}
 const sv=saved&&F.querySelector(`input[value="${saved}"]`);if(sv)sv.checked=true;
 function apply(){const tv=F.querySelector('input[name=tier]:checked').value,max=tv==='all'?9:+tv,s=q.value.trim().toLowerCase();try{localStorage.setItem('nsd-tier',tv)}catch(_){}
- items.forEach(el=>{const ok=(+el.dataset.tier<=max)&&(!s||el.dataset.search.includes(s));el.classList.toggle('hide',!ok)});
+ try{localStorage.setItem('nsd-mine',mine.checked?'1':'0');localStorage.setItem('nsd-ffirst',ff.checked?'1':'0')}catch(_){}order();
+ items.forEach(el=>{const ok=(mine.checked?el.classList.contains('fav'):+el.dataset.tier<=max)&&(!s||el.dataset.search.includes(s));el.classList.toggle('hide',!ok)});
  document.querySelectorAll('.grp').forEach(g=>g.classList.toggle('hide',!g.querySelector('[data-tier]:not(.hide)')));
  document.querySelectorAll('.sect').forEach(sc=>{const any=sc.querySelector('[data-tier]:not(.hide)'),em=sc.querySelector('.empty');if(em)em.style.display=any?'none':'block'})}
-F.addEventListener('change',apply);q.addEventListener('input',apply);apply()})();"""
+F.addEventListener('change',apply);document.addEventListener('nsd-follow',()=>{if(mine.checked||ff.checked)apply()});q.addEventListener('input',apply);apply()})();"""
 BD="nospoildota"
 def signup(compact=True):
     f=f"""<form action="https://buttondown.com/api/emails/embed-subscribe/{BD}" method="post" target="popupwindow" onsubmit="window.open('https://buttondown.com/{BD}', 'popupwindow')"><label for=bd-email class=sr>Email</label><input type=email name="email" id=bd-email required placeholder="you@example.com"> <button type=submit>Subscribe</button></form>"""
@@ -177,14 +193,17 @@ def watch_links(s):
     if not any(pl=='twitch' for pl,_ in st):
         out.append(f"<a class='btn ghost' href='https://www.twitch.tv/search?term={urllib.parse.quote(tn)}&amp;type=videos' target=_blank rel=noopener data-warn=Twitch>Twitch search ⚠</a>")
     return "".join(out)
+def star(k,n,big=False):
+    lab=f"Follow {e(n)}"
+    return f"<button type=button class='star{' big' if big else ''}' data-follow={k} aria-pressed=false aria-label='{lab}' title='{lab}'><span aria-hidden=true>☆</span>{'<span class=lbl>Follow</span>' if big else ''}</button>"
 def card(s,d,ctx,TEAMS):
     a,b=s['teams']; uid="r"+hashlib.md5(f"{s['start']}{a}{b}{s['tname']}".encode()).hexdigest()[:8]
     live=s.get('live'); kind='live' if live else ('up' if ctx=='up' else 'done')
-    tn=lambda x: e(x) if team_key(x) not in TEAMS else f"<a href='{'../'*d}team/{slug(TEAMS[team_key(x)])}.html'>{e(x)}</a>"
+    tn=lambda x: e(x) if team_key(x) not in TEAMS else star(team_key(x),TEAMS[team_key(x)])+f"<a href='{'../'*d}team/{slug(TEAMS[team_key(x)])}.html'>{e(x)}</a>"
     tier=f"<span class=tier title='Liquipedia tier {s['tier']}'>T{s['tier']}</span>" if s.get('tier') else ""
     head=(f"<div class=when data-ts={s['start']} data-kind={kind}></div><div><div class=teams>{tn(a)}<span class=vs>vs</span>{tn(b)}"
           f"{'<span class=badge>LIVE</span>' if live else ''}</div><div class=tag><a href='{'../'*d}t/{slug(s['tname'])}.html'>{e(s['tname'])}</a> · Bo{s['bo']}{tier}</div></div>")
-    attrs=f"class='m{' is-live' if live else ''}' data-tier={s.get('tier') or 9} data-search=\"{e(f'{a} {b} {s[chr(116)+"name"]}'.lower())}\""
+    attrs=f"class='m{' is-live' if live else ''}' data-tier={s.get('tier') or 9} data-teams=\"{' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e(f'{a} {b} {s[chr(116)+"name"]}'.lower())}\""
     if ctx=='up':
         acts=""
         if s.get('streams'): acts=f"<a class='btn{'' if live else ' ghost'}' href='{stream_url(*s['streams'][0])}' target=_blank rel=noopener>{'▶ Watch live' if live else 'Stream'}</a>"
@@ -251,9 +270,9 @@ def build():
     sect=lambda h,inner,empty,idn: f"<section class=sect aria-labelledby={idn}><h2 id={idn}>{h}</h2>{inner}<p class=empty>{empty}</p></section>"
     has_top=any((s.get('tier') or 9)<=2 for s in upcoming)
     radio=lambda v,l,chk: f"<label class=pill><input type=radio name=tier value={v}{' checked' if chk else ''}><span>{l}</span></label>"
-    filt=(f"<form id=filters class=filters role=search onsubmit='return false'><fieldset><legend>Tier</legend>{radio(1,'Tier 1',False)}{radio(2,'Tier 1–2',has_top)}{radio(3,'Tier 1–3',False)}{radio('all','All',not has_top)}</fieldset>"
+    filt=(f"<form id=filters class=filters role=search onsubmit='return false'><fieldset><legend>Tier</legend>{radio(1,'Tier 1',False)}{radio(2,'Tier 1–2',has_top)}{radio(3,'Tier 1–3',False)}{radio('all','All',not has_top)}</fieldset><fieldset><legend>Followed teams</legend><label class=pill><input type=checkbox id=mine><span>★ My teams</span></label><label class=pill><input type=checkbox id=ffirst><span>Followed first</span></label></fieldset>"
           "<label for=q class=sr>Filter by team or tournament</label><input id=q type=search placeholder='Search team or tournament…' autocomplete=off></form>"
-          "<p class=tag>Tiers from Liquipedia. Leagues it doesn’t list only appear under “All”.</p>")
+          "<p class=tag>Tap ☆ next to a team to follow it (saved on this device only). Tiers from Liquipedia. Leagues it doesn’t list only appear under “All”.</p>")
     body=("<p class=note><b>Spoiler-free:</b> no winners, scores or game lengths. Results stay hidden until you press <b>Reveal result</b>.</p>"+filt
           +sect("Live now",section(live,'up'),"Nothing live right now for this filter.","h-live")
           +sect("Upcoming · next 7 days",section(soon,'up'),"No upcoming matches for this filter.","h-up")
@@ -282,12 +301,12 @@ def build():
         for t in s['pair']-{'tbd'}: tm[t]["done"].append(s)
     for k,v in tm.items():
         n=TEAMS[k]; sl=slug(n); url=f"{SITE}team/{sl}.html"
-        b=(f"<h1>{e(n)}</h1><p class=tag><a href='../cal/team/{sl}.ics'>📅 Add {e(n)}’s matches to your calendar (.ics)</a> · spoiler-free: no results or standings.</p>"
+        b=(f"<h1>{e(n)} {star(k,n,True)}</h1><p class=tag><a href='../cal/team/{sl}.ics'>📅 Add {e(n)}’s matches to your calendar (.ics)</a> · spoiler-free: no results or standings.</p>"
            +sect("Live &amp; upcoming",section(v['up'],'up',1,False),"Nothing on Liquipedia’s ticker right now.","h-up")
            +sect("Recent series",section(v['done'],'done',1,False),"No recent series in OpenDota’s feed.","h-done"))
         open(f"{OUT}/team/{sl}.html","w").write(page(n,b,1))
         open(f"{OUT}/cal/team/{sl}.ics","w",newline="").write(ics(n,v['up']+v['done'],url))
-    tl="".join(f"<li><a href='team/{slug(TEAMS[k])}.html'>{e(TEAMS[k])}</a> <span class=tag>{len(tm[k]['up'])} upcoming · {len(tm[k]['done'])} recent</span></li>" for k in sorted(tm,key=lambda k:TEAMS[k].lower()))
+    tl="".join(f"<li data-teams={k}>{star(k,TEAMS[k])}<a href='team/{slug(TEAMS[k])}.html'>{e(TEAMS[k])}</a> <span class=tag>{len(tm[k]['up'])} upcoming · {len(tm[k]['done'])} recent</span></li>" for k in sorted(tm,key=lambda k:TEAMS[k].lower()))
     open(f"{OUT}/teams.html","w").write(page("Teams","<h1>Teams</h1><p class=tag>Every team page has a spoiler-free schedule and a calendar feed.</p><ul class=teamlist>"+tl+"</ul>",0,"teams.html"))
     keep={"t":{slug(TN[k]) for k in tours},"team":{slug(TEAMS[k]) for k in tm}}
     for d_ in ("t","team","cal/t","cal/team"):  # prune stale pages from earlier local builds
