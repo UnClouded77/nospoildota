@@ -1,0 +1,6 @@
+.venv/
+cache/
+screens/
+site/
+__pycache__/
+*.pyc
