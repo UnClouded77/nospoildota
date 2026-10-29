@@ -110,7 +110,7 @@ h3{font-size:13px;margin:1.1em 0 .3em;color:var(--mut);text-transform:uppercase;
 .tier{font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:0 4px;margin-left:6px;color:var(--mut);vertical-align:1px;letter-spacing:0}
 .m{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:9px 12px;margin:6px 0;display:grid;grid-template-columns:150px 1fr auto;gap:4px 12px;align-items:center}
 .m.is-live{border-color:#8a2b2b;background:#1e1618}
-.when{font-size:13px;color:var(--mut)}.when .rel{display:block;color:var(--fg);font-weight:600}
+.when{font-size:13px;color:var(--mut)}.when .rel{display:block;color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}.when.near .rel{color:#ffb199}
 .teams{font-weight:600}.teams a{color:var(--fg)}.vs{color:var(--mut);font-weight:400;margin:0 6px}
 .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .btn{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid var(--bd);background:#222733;color:var(--fg);cursor:pointer;min-height:32px;display:inline-flex;align-items:center}
@@ -140,8 +140,8 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:24px 16px;borde
 .watch{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.rp a{margin-right:8px}
 @media(max-width:640px){.star{min-width:44px;min-height:44px}.m{grid-template-columns:1fr}.m .when{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.m .when .rel{display:inline}.m .acts .btn{flex:1 1 auto;justify-content:center}.acts{justify-content:flex-start}main{padding:10px 12px}}"""
 CSS+="\nheader .logo{grid-area:logo}header nav{grid-area:nav;min-width:0}.lang{grid-area:lang;justify-self:end;font-size:13px;color:var(--mut);border:1px solid var(--bd);border-radius:14px;padding:2px 10px;white-space:nowrap}.lang a{color:var(--mut);padding:2px}@media(max-width:640px){header{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'logo lang' 'nav nav'}}.lang a[aria-current]{color:var(--fg);font-weight:700}#eshint{margin:6px 0}#eshint[hidden]{display:none}"
-JS=r"""(()=>{const HL=document.documentElement.lang,LG=HL==='es'?'es':HL==='pt-BR'?'pt':'en',LOC={es:'es',pt:'pt-BR',en:[]}[LG],T={pt:{live:'Ao vivo',inm:'em %s min',inh:'em %s h',today:'hoje ',tom:'começa amanhã',ind:'em %s dias',soon:'começando em breve',agom:'há %s min',agoh:'há %s h',yest:'ontem',agod:'há %s dias',LIVE:'AO VIVO',SOON:'EM BREVE',ch:'Canal ao vivo',wl:'Assistir ao vivo',rv:'Mostrar replays',won:'%s venceu',na:'Resultado indisponível',hd:'Ocultar replays',cf:'Mostrar os links de replay? A quantidade de links revela quantos jogos foram disputados.',cp:'copiado',fol:'Seguir',unf:'Deixar de seguir',fing:'Seguindo',tz:'horário local'},es:{live:'En vivo',inm:'en %s min',inh:'en %s h',today:'hoy ',tom:'empieza mañana',ind:'en %s días',soon:'por comenzar',agom:'hace %s min',agoh:'hace %s h',yest:'ayer',agod:'hace %s días',LIVE:'EN VIVO',SOON:'PRONTO',ch:'Canal en vivo',wl:'Ver en vivo',rv:'Mostrar repeticiones',won:'Ganó %s',na:'Resultado no disponible',hd:'Ocultar repeticiones',cf:'¿Mostrar los enlaces de repetición? La cantidad de enlaces revela cuántos juegos se jugaron.',cp:'copiado',fol:'Seguir',unf:'Dejar de seguir',fing:'Siguiendo',tz:'hora local'},
-en:{live:'Live now',inm:'in %s min',inh:'in %sh',today:'today ',tom:'starts tomorrow',ind:'in %s days',soon:'starting soon',agom:'%s min ago',agoh:'%sh ago',yest:'yesterday',agod:'%s days ago',LIVE:'LIVE',SOON:'SOON',ch:'Live channel',wl:'Watch live',rv:'Reveal replays',won:'%s won',na:'Result not available',hd:'Hide replays',cf:'Show replay links? The number of links shows how many games were played.',cp:'copied',fol:'Follow',unf:'Unfollow',fing:'Following',tz:'local time'}}[LG],
+JS=r"""(()=>{const HL=document.documentElement.lang,LG=HL==='es'?'es':HL==='pt-BR'?'pt':'en',LOC={es:'es',pt:'pt-BR',en:[]}[LG],T={pt:{cin:'em %s',started:'Começou',live:'Ao vivo',inm:'em %s min',inh:'em %s h',today:'hoje ',tom:'começa amanhã',ind:'em %s dias',soon:'começando em breve',agom:'há %s min',agoh:'há %s h',yest:'ontem',agod:'há %s dias',LIVE:'AO VIVO',SOON:'EM BREVE',ch:'Canal ao vivo',wl:'Assistir ao vivo',rv:'Mostrar replays',won:'%s venceu',na:'Resultado indisponível',hd:'Ocultar replays',cf:'Mostrar os links de replay? A quantidade de links revela quantos jogos foram disputados.',cp:'copiado',fol:'Seguir',unf:'Deixar de seguir',fing:'Seguindo',tz:'horário local'},es:{cin:'en %s',started:'Empezó',live:'En vivo',inm:'en %s min',inh:'en %s h',today:'hoy ',tom:'empieza mañana',ind:'en %s días',soon:'por comenzar',agom:'hace %s min',agoh:'hace %s h',yest:'ayer',agod:'hace %s días',LIVE:'EN VIVO',SOON:'PRONTO',ch:'Canal en vivo',wl:'Ver en vivo',rv:'Mostrar repeticiones',won:'Ganó %s',na:'Resultado no disponible',hd:'Ocultar repeticiones',cf:'¿Mostrar los enlaces de repetición? La cantidad de enlaces revela cuántos juegos se jugaron.',cp:'copiado',fol:'Seguir',unf:'Dejar de seguir',fing:'Siguiendo',tz:'hora local'},
+en:{cin:'in %s',started:'Started',live:'Live now',inm:'in %s min',inh:'in %sh',today:'today ',tom:'starts tomorrow',ind:'in %s days',soon:'starting soon',agom:'%s min ago',agoh:'%sh ago',yest:'yesterday',agod:'%s days ago',LIVE:'LIVE',SOON:'SOON',ch:'Live channel',wl:'Watch live',rv:'Reveal replays',won:'%s won',na:'Result not available',hd:'Hide replays',cf:'Show replay links? The number of links shows how many games were played.',cp:'copied',fol:'Follow',unf:'Unfollow',fing:'Following',tz:'local time'}}[LG],
 f=(k,n)=>T[k].replace('%s',n);
 const now=Date.now()/1000,fmt=new Intl.DateTimeFormat(LOC, {weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),
 tf=new Intl.DateTimeFormat(LOC, {hour:'2-digit',minute:'2-digit'}),day=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()};
@@ -153,12 +153,19 @@ document.querySelectorAll('[data-ts]').forEach(e=>{const ts=+e.dataset.ts,full=f
  e.textContent='';if(r){const s=document.createElement('span');s.className='rel';s.textContent=r;e.append(s,' ')}e.append(full);e.title=full});
 const nl=(navigator.language||'').toLowerCase();[['eshint','es'],['pthint','pt']].forEach(([id,p])=>{const h=document.getElementById(id);if(h&&nl.startsWith(p))h.hidden=false});
 const ls=document.getElementById('ls-list');
-document.querySelectorAll('.m[data-bo]').forEach(c=>{const ts=+c.querySelector('[data-ts]').dataset.ts,bo=+c.dataset.bo||1,d=ts-now;
- const live=(d<=0&&now<ts+bo*4500)||(c.dataset.live==='1'&&now<ts+bo*4500+7200),soon=!live&&d>0&&d<=3600;if(!live&&!soon)return;
- const t=c.querySelector('.teams'),bd=document.createElement('span');bd.className='badge'+(soon?' soon':'');bd.textContent=live?T.LIVE:T.SOON;t.append(bd);
- c.classList.add(live?'is-live':'is-soon');const w=c.querySelector('[data-kind]');if(w&&live){w.dataset.kind='live';w.querySelector('.rel').textContent=T.live}
- if(live)c.querySelectorAll('.strm').forEach(sw=>{sw.classList.remove('ghost');sw.textContent=sw.textContent.replace(T.ch,T.wl)});
- if(ls){ls.append(c)}});
+const CDS=[...document.querySelectorAll('.m[data-bo]')].map(c=>{const w=c.querySelector('[data-ts]');return{c,w,ts:+w.dataset.ts,bo:+c.dataset.bo||1,lv:c.dataset.live==='1',st:'',r0:(w.querySelector('.rel')||{}).textContent}});
+function badge(o,kind){const t=o.c.querySelector('.teams');let bd=t.querySelector('.badge');if(!bd){bd=document.createElement('span');t.append(bd)}
+ bd.className='badge'+(kind==='soon'?' soon':'');bd.textContent=kind==='live'?T.LIVE:T.SOON;o.c.classList.remove('is-live','is-soon');o.c.classList.add('is-'+kind)}
+function cdtxt(d){const H=Math.floor(d/3600),M=Math.floor(d%3600/60),S=Math.floor(d%60);return T.cin.replace('%s',H?H+'h '+M+'m':M?M+'m '+String(S).padStart(2,'0')+'s':S+'s')}
+function tick(){const n=Date.now()/1000;CDS.forEach(o=>{const d=o.ts-n,end=o.ts+o.bo*4500+(o.lv?7200:0),r=o.w.querySelector('.rel');
+ const st=d>0?(d<=3600?'soon':'up'):n<end?'live':'started';
+ if(st!==o.st){o.st=st;if(st==='soon')badge(o,'soon');
+  if(st==='live'){badge(o,'live');o.w.dataset.kind='live';o.c.querySelectorAll('.strm').forEach(sw=>{sw.classList.remove('ghost');sw.textContent=sw.textContent.replace(T.ch,T.wl)});if(ls&&!ls.contains(o.c))ls.append(o.c)}
+  if(st==='started'){o.c.classList.remove('is-live','is-soon');const b=o.c.querySelector('.badge');if(b)b.remove()}}
+ if(!r)return;o.w.classList.toggle('near',d>0&&d<900);
+ r.textContent=st==='live'?T.live:st==='started'?T.started:d<86400?cdtxt(d):o.r0})}
+let TK=null;const run=()=>{clearInterval(TK);TK=null;if(!document.hidden&&CDS.length){tick();TK=setInterval(tick,1000)}};
+document.addEventListener('visibilitychange',run);run();
 document.querySelectorAll('.byday').forEach(box=>{let last='';[...box.children].forEach(c=>{const w=c.querySelector('[data-ts]');if(!w)return;
  const k=new Date(+w.dataset.ts*1000).toDateString();if(k!==last){last=k;const h=document.createElement('h3');h.className='day';
  h.textContent=new Intl.DateTimeFormat(LOC, {weekday:'long',month:'long',day:'numeric'}).format(new Date(+w.dataset.ts*1000));box.insertBefore(h,c)}})});
