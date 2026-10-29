@@ -258,6 +258,13 @@ LG='en'; L=STR['en']; RP=''; LROOT=SITE
 def set_lang(lg):
     global LG,L,RP,LROOT
     LG=lg; L=STR[lg]; RP='' if lg=='en' else '../'; LROOT=SITE if lg=='en' else SITE+'es/'
+DOW={'en':'Mon Tue Wed Thu Fri Sat Sun'.split(),'es':'lun mar mié jue vie sáb dom'.split()}
+MON={'en':'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(),'es':'ene feb mar abr may jun jul ago sep oct nov dic'.split()}
+def fdate(ts):
+    """No-JS fallback date in the page language (UTC); app.js replaces it with local time."""
+    d=dt.datetime.fromtimestamp(ts,dt.timezone.utc)
+    return f"{DOW[LG][d.weekday()]}, {d.day} {MON[LG][d.month-1]}, {d:%H:%M} UTC" if LG=='es' else f"{DOW[LG][d.weekday()]}, {MON[LG][d.month-1]} {d.day}, {d:%H:%M} UTC"
+ASSET_V=hashlib.md5((CSS+JS).encode()).hexdigest()[:10]
 BD="nospoildota"
 def signup(compact=True):
     f=f"""<form action="https://buttondown.com/api/emails/embed-subscribe/{BD}" method="post" target="popupwindow" onsubmit="window.open('https://buttondown.com/{BD}', 'popupwindow')"><label for=bd-email class=sr>{L['email']}</label><input type=email name="email" id=bd-email required placeholder="{L['email_ph']}"> <button type=submit>{L['subscribe']}</button></form>"""
@@ -277,9 +284,9 @@ def page(title,body,depth=0,cur=None,path="",desc=None,ld=None):
     hint=f"<p id=eshint class=note lang=es hidden>{L['hint'].format(es=rel_es)}</p>" if LG=='en' else ""
     alt=(f'<link rel=alternate hreflang=en href="{en_u}"><link rel=alternate hreflang=es href="{es_u}"><link rel=alternate hreflang=x-default href="{en_u}">')
     return f"""<!doctype html><html lang={LG}><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{e(title)}</title>
-<meta name=description content="{e(desc)}"><link rel=canonical href="{can}">{alt}<meta property=og:type content=website><meta property=og:site_name content=NoSpoilDota><meta property=og:locale content={L['locale']}><meta property=og:title content="{e(title)}"><meta property=og:description content="{e(desc)}"><meta property=og:url content="{can}"><meta name=twitter:card content=summary><meta name=color-scheme content=dark>{ldj}<link rel=stylesheet href="{r}style.css"></head><body>
+<meta name=description content="{e(desc)}"><link rel=canonical href="{can}">{alt}<meta property=og:type content=website><meta property=og:site_name content=NoSpoilDota><meta property=og:locale content={L['locale']}><meta property=og:title content="{e(title)}"><meta property=og:description content="{e(desc)}"><meta property=og:url content="{can}"><meta name=twitter:card content=summary><meta name=color-scheme content=dark>{ldj}<link rel=stylesheet href="{r}style.css?v={ASSET_V}"></head><body>
 <a class=skip href="#main">{L['skip']}</a><header><a class=logo href="{p}index.html">NoSpoil<span>Dota</span></a><nav aria-label={L['main_nav']}>{nav}</nav>{sw}</header>
-<main id=main>{hint}{body}</main><footer>{L['foot'].format(p=p)}</footer><script src="{r}app.js" defer></script><script data-goatcounter="https://nospoildota.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></body></html>"""
+<main id=main>{hint}{body}</main><footer>{L['foot'].format(p=p)}</footer><script src="{r}app.js?v={ASSET_V}" defer></script><script data-goatcounter="https://nospoildota.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></body></html>"""
 PAGES=[]
 HANDLE={'twitch':r'[A-Za-z0-9_]{3,25}','kick':r'[A-Za-z0-9_-]{3,40}','youtube':r'@?[A-Za-z0-9_.-]{3,40}|channel/UC[A-Za-z0-9_-]{22}'}
 def stream_url(pl,ch):
@@ -358,7 +365,7 @@ def card(s,d,ctx,TEAMS):
     live=s.get('live')
     tn=lambda x: e(x) if team_key(x) not in TEAMS else star(team_key(x),TEAMS[team_key(x)])+f"<a href='{'../'*d}team/{slug(TEAMS[team_key(x)])}.html'>{e(x)}</a>"
     tier=f"<span class=tier title='{L['tier_title'].format(n=s['tier'])}'>T{s['tier']}</span>" if s.get('tier') else ""
-    head=(f"<div class=when data-ts={s['start']} data-kind={'up' if ctx=='up' else 'done'}></div><div><div class=teams>{tn(a)}<span class=vs>vs</span>{tn(b)}"
+    head=(f"<div class=when data-ts={s['start']} data-kind={'up' if ctx=='up' else 'done'}>{fdate(s['start'])}</div><div><div class=teams>{tn(a)}<span class=vs>vs</span>{tn(b)}"
           f"</div><div class=tag><a href='{'../'*d}t/{slug(s['tname'])}.html'>{e(s['tname'])}</a> · Bo{s['bo']}{tier}</div></div>")
     attrs=f"class=m{' data-bo='+str(s['bo'])+(' data-live=1' if live else '') if ctx=='up' else ''} data-tier={s.get('tier') or 9} data-teams=\"{' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e(f'{a} {b} {s[chr(116)+"name"]}'.lower())}\""
     if ctx=='up':
@@ -370,7 +377,7 @@ def card(s,d,ctx,TEAMS):
             f"<div class=res id={uid} hidden>{maps}</div></div>")
 def tbd_block(items):
     if not items: return ""
-    li="".join(f"<li><span data-ts={s['start']} data-kind=up></span> · {e(' vs '.join(s['teams']))} · Bo{s['bo']}</li>" for s in sorted(items,key=lambda x:x['start']))
+    li="".join(f"<li><span data-ts={s['start']} data-kind=up>{fdate(s['start'])}</span> · {e(' vs '.join(s['teams']))} · Bo{s['bo']}</li>" for s in sorted(items,key=lambda x:x['start']))
     t=min((s.get('tier') or 9) for s in items); n=len(items)
     return f"<details class=tbd data-tier={t} data-search=\"{e(items[0]['tname'].lower())} tbd\"><summary>{(L['tbd1'] if n==1 else L['tbdn']).format(n=n)}</summary><ul>{li}</ul></details>"
 def ics(name,items,url):
