@@ -135,8 +135,8 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:24px 16px;borde
 .watch{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.rp a{margin-right:8px}
 @media(max-width:640px){.star{min-width:44px;min-height:44px}.m{grid-template-columns:1fr}.m .when{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.m .when .rel{display:inline}.m .acts .btn{flex:1 1 auto;justify-content:center}.acts{justify-content:flex-start}main{padding:10px 12px}}"""
 CSS+="\nheader nav{order:1}.lang{order:2;flex:none;font-size:13px;color:var(--mut);border:1px solid var(--bd);border-radius:14px;padding:2px 10px;white-space:nowrap}.lang a{color:var(--mut);padding:2px}header .lang{margin-left:auto}@media(max-width:640px){header nav{order:3;flex-basis:100%}}.lang a[aria-current]{color:var(--fg);font-weight:700}#eshint{margin:6px 0}#eshint[hidden]{display:none}"
-JS=r"""(()=>{const ES=document.documentElement.lang==='es',LOC=ES?'es':[],T=ES?{live:'En vivo',inm:'en %s min',inh:'en %s h',today:'hoy ',tom:'empieza mañana',ind:'en %s días',soon:'por comenzar',agom:'hace %s min',agoh:'hace %s h',yest:'ayer',agod:'hace %s días',LIVE:'EN VIVO',SOON:'PRONTO',ch:'Canal en vivo',wl:'Ver en vivo',rv:'Mostrar repeticiones',hd:'Ocultar repeticiones',cf:'¿Mostrar los enlaces de repetición? La cantidad de enlaces revela cuántos juegos se jugaron.',cp:'copiado',fol:'Seguir',unf:'Dejar de seguir',fing:'Siguiendo',tz:'hora local'}
-:{live:'Live now',inm:'in %s min',inh:'in %sh',today:'today ',tom:'starts tomorrow',ind:'in %s days',soon:'starting soon',agom:'%s min ago',agoh:'%sh ago',yest:'yesterday',agod:'%s days ago',LIVE:'LIVE',SOON:'SOON',ch:'Live channel',wl:'Watch live',rv:'Reveal replays',hd:'Hide replays',cf:'Show replay links? The number of links shows how many games were played.',cp:'copied',fol:'Follow',unf:'Unfollow',fing:'Following',tz:'local time'},
+JS=r"""(()=>{const HL=document.documentElement.lang,LG=HL==='es'?'es':HL==='pt-BR'?'pt':'en',LOC={es:'es',pt:'pt-BR',en:[]}[LG],T={pt:{live:'Ao vivo',inm:'em %s min',inh:'em %s h',today:'hoje ',tom:'começa amanhã',ind:'em %s dias',soon:'começando em breve',agom:'há %s min',agoh:'há %s h',yest:'ontem',agod:'há %s dias',LIVE:'AO VIVO',SOON:'EM BREVE',ch:'Canal ao vivo',wl:'Assistir ao vivo',rv:'Mostrar replays',hd:'Ocultar replays',cf:'Mostrar os links de replay? A quantidade de links revela quantos jogos foram disputados.',cp:'copiado',fol:'Seguir',unf:'Deixar de seguir',fing:'Seguindo',tz:'horário local'},es:{live:'En vivo',inm:'en %s min',inh:'en %s h',today:'hoy ',tom:'empieza mañana',ind:'en %s días',soon:'por comenzar',agom:'hace %s min',agoh:'hace %s h',yest:'ayer',agod:'hace %s días',LIVE:'EN VIVO',SOON:'PRONTO',ch:'Canal en vivo',wl:'Ver en vivo',rv:'Mostrar repeticiones',hd:'Ocultar repeticiones',cf:'¿Mostrar los enlaces de repetición? La cantidad de enlaces revela cuántos juegos se jugaron.',cp:'copiado',fol:'Seguir',unf:'Dejar de seguir',fing:'Siguiendo',tz:'hora local'},
+en:{live:'Live now',inm:'in %s min',inh:'in %sh',today:'today ',tom:'starts tomorrow',ind:'in %s days',soon:'starting soon',agom:'%s min ago',agoh:'%sh ago',yest:'yesterday',agod:'%s days ago',LIVE:'LIVE',SOON:'SOON',ch:'Live channel',wl:'Watch live',rv:'Reveal replays',hd:'Hide replays',cf:'Show replay links? The number of links shows how many games were played.',cp:'copied',fol:'Follow',unf:'Unfollow',fing:'Following',tz:'local time'}}[LG],
 f=(k,n)=>T[k].replace('%s',n);
 const now=Date.now()/1000,fmt=new Intl.DateTimeFormat(LOC, {weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),
 tf=new Intl.DateTimeFormat(LOC, {hour:'2-digit',minute:'2-digit'}),day=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()};
@@ -146,7 +146,7 @@ function rel(ts,kind){const d=ts-now,a=Math.abs(d),dd=Math.round((day(ts*1000)-d
  if(kind==='up')return T.soon;if(a<3600)return f('agom',Math.round(a/60));if(a<86400)return f('agoh',Math.round(a/3600));if(dd===-1)return T.yest;return f('agod',Math.round(a/86400))}
 document.querySelectorAll('[data-ts]').forEach(e=>{const ts=+e.dataset.ts,full=fmt.format(new Date(ts*1000)),r=rel(ts,e.dataset.kind);
  e.textContent='';if(r){const s=document.createElement('span');s.className='rel';s.textContent=r;e.append(s,' ')}e.append(full);e.title=full});
-const hint=document.getElementById('eshint');if(hint&&/^es\b/i.test(navigator.language||''))hint.hidden=false;
+const nl=(navigator.language||'').toLowerCase();[['eshint','es'],['pthint','pt']].forEach(([id,p])=>{const h=document.getElementById(id);if(h&&nl.startsWith(p))h.hidden=false});
 const ls=document.getElementById('ls-list');
 document.querySelectorAll('.m[data-bo]').forEach(c=>{const ts=+c.querySelector('[data-ts]').dataset.ts,bo=+c.dataset.bo||1,d=ts-now;
  const live=(d<=0&&now<ts+bo*4500)||(c.dataset.live==='1'&&now<ts+bo*4500+7200),soon=!live&&d>0&&d<=3600;if(!live&&!soon)return;
@@ -218,7 +218,7 @@ STR={
  nl_title='Spoiler-free Dota 2 newsletter | NoSpoilDota',nl_desc='A free weekly spoiler-free email of Dota 2 series worth watching.',
  nl_body='<h1>What to watch: weekly spoiler-free email</h1><p>A free weekly email with the Dota 2 series worth watching and where to find the VODs. No winners, no scores, no spoilers, ever.</p>',
  nl_foot="Free, one email a week, unsubscribe anytime. Powered by <a href='https://buttondown.com'>Buttondown</a>.",
- hint='¿Prefieres español? <a href="{es}">Ver esta página en español →</a>'),
+ hint=''),
 'es':dict(locale='es_419',matches='Partidas',tournaments='Torneos',teams='Equipos',about='Acerca de',skip='Saltar al contenido',main_nav='Principal',
  foot='Datos de partidas: <a href="https://www.opendota.com">OpenDota</a> · Calendario, tiers y streams: <a href="https://liquipedia.net/dota2/">Liquipedia</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA 3.0</a>) · Sin afiliación con Valve · Horarios en tu zona horaria (<span id=tzname>local</span>) · <a href="{p}newsletter.html">Boletín</a>',
  desc='Calendario de partidas profesionales de Dota 2 sin spoilers y buscador de repeticiones: horarios, avisos en vivo y streams oficiales, sin marcadores.',
@@ -253,17 +253,54 @@ STR={
  nl_title='Boletín de Dota 2 sin spoilers | NoSpoilDota',nl_desc='Un correo semanal gratuito y sin spoilers con las series de Dota 2 que vale la pena ver.',
  nl_body='<h1>Qué ver: correo semanal sin spoilers</h1><p>Un correo semanal gratuito con las series de Dota 2 que vale la pena ver y dónde encontrar los VODs. Sin ganadores, sin marcadores, nunca spoilers.</p>',
  nl_foot="Gratis, un correo por semana, cancela cuando quieras. Funciona con <a href='https://buttondown.com'>Buttondown</a>.",
+ hint=''),
+'pt':dict(locale='pt_BR',matches='Partidas',tournaments='Torneios',teams='Times',about='Sobre',skip='Pular para o conteúdo',main_nav='Principal',
+ foot='Dados das partidas: <a href="https://www.opendota.com">OpenDota</a> · Agenda, tiers e transmissões: <a href="https://liquipedia.net/dota2/">Liquipedia</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA 3.0</a>) · Sem vínculo com a Valve · Horários no seu fuso (<span id=tzname>local</span>) · <a href="{p}newsletter.html">Newsletter</a>',
+ desc='Agenda de partidas profissionais de Dota 2 sem spoilers e buscador de replays: horários, avisos ao vivo e transmissões oficiais, sem placares.',
+ ch='Canal ao vivo',wl='Assistir ao vivo',ch_title='Canal oficial ao vivo',follow='Seguir',tier_title='Tier {n} da Liquipedia',
+ replay='Replay {i}: ID da partida',copy='copiar',client='Assista no cliente do Dota 2: Assistir → Replays → busque o ID da partida (ficam disponíveis por cerca de duas semanas). Sites de estatísticas como o OpenDota mostram o resultado.',
+ reveal='Mostrar replays',tbd1='+ {n} vaga de rodadas seguintes, times a definir',tbdn='+ {n} vagas de rodadas seguintes, times a definir',
+ sub_summary='Opcional: um e-mail semanal sem spoilers com “o que assistir”',subscribe='Inscrever-se',email='E-mail',email_ph='voce@exemplo.com',
+ lg_tier='Tier',t1='Tier 1',t12='Tier 1–2',t13='Tier 1–3',all='Todos',lg_fol='Times seguidos',mine='★ Meus times',ffirst='Seguidos primeiro',
+ q_label='Filtrar por time ou torneio',q_ph='Buscar time ou torneio…',filt_help='Toque em ☆ ao lado de um time para segui-lo (fica salvo só neste aparelho). Tiers da Liquipedia. Ligas que não aparecem lá só são mostradas em “Todos”.',
+ h1_home='Agenda de partidas profissionais de Dota 2 sem spoilers',ls='Ao vivo e começando em breve',ls_empty='Nada ao vivo nem começando na próxima hora com este filtro.',
+ note='<b>Sem spoilers:</b> sem vencedores, placares nem quantidade de jogos; só o formato (Bo3, Bo5…). Os links de replay ficam ocultos até você tocar em <b>Mostrar replays</b>.',
+ upc='Próximas · próximos 7 dias',upc_empty='Nenhuma partida próxima com este filtro.',rec='Encerradas recentemente',rec_empty='Nenhuma série encerrada com este filtro. Tente “Todos”.',
+ home_title='Agenda de Dota 2 pro – sem spoilers | NoSpoilDota',home_desc='Agenda de partidas profissionais de Dota 2 sem spoilers: séries ao vivo e próximas, transmissões oficiais e IDs de replay, sem placares nem vencedores.',
+ tier_h='Tier {n}',no_stream='Ainda não há um canal oficial de transmissão conhecido.',add_cal='📅 Adicionar à agenda (.ics)',lp_res='(mostra resultados) · horários no seu fuso',
+ lu='Ao vivo e próximas',none_sched='Nada agendado.',fin='Encerradas',none_yet='Nenhuma ainda.',
+ t_title='Agenda do {n} – sem spoilers | NoSpoilDota',t_desc='Agenda do {n} de Dota 2 por dia, com transmissões oficiais e IDs de replay. Sem spoilers: sem placares, vencedores nem quantidade de jogos.',
+ tl_counts='{u} próximas · {d} encerradas',tours_title='Torneios de Dota 2 – agendas sem spoilers | NoSpoilDota',tours_desc='Torneios profissionais de Dota 2 em andamento, com agendas sem spoilers e feeds de calendário.',
+ team_cal='📅 Adicione as partidas de {n} à sua agenda (.ics)',team_sf='sem spoilers: sem resultados nem classificação.',team_up_empty='Nada no ticker da Liquipedia no momento.',
+ recs='Séries recentes',recs_empty='Nenhuma série recente no feed do OpenDota.',team_title='Agenda de {n} no Dota 2 – sem spoilers | NoSpoilDota',
+ team_desc='Partidas próximas e recentes de {n} no Dota 2, com transmissões oficiais e feed de calendário. Sem spoilers: sem resultados.',
+ teams_counts='{u} próximas · {d} recentes',teams_intro='Cada página de time tem uma agenda sem spoilers e um feed de calendário.',
+ teams_title='Times pro de Dota 2 – agendas sem spoilers | NoSpoilDota',teams_desc='Siga times profissionais de Dota 2: agendas de partidas sem spoilers e feeds de calendário para cada time.',
+ about_title='Sobre o NoSpoilDota – agenda de Dota 2 sem spoilers',about_desc='Como o NoSpoilDota mantém as agendas de Dota 2 sem spoilers e de onde vêm os dados (OpenDota, Liquipedia CC-BY-SA).',
+ about_body="""<h1>Sobre o NoSpoilDota</h1><p>Uma agenda sem spoilers de partidas profissionais de Dota 2. Encontre o VOD sem descobrir antes quem venceu.</p>
+<h2>Como tudo fica sem spoilers</h2><ul><li>As listas mostram só os times, o torneio, o horário de início e o formato. Nunca mostramos vencedores, placares nem quantos jogos foram disputados; cada série mostra só o formato (Bo3, Bo5…). Os IDs de replay ficam atrás de <b>Mostrar replays</b>.</li>
+<li>Os links para assistir levam só a canais oficiais da Twitch/YouTube/Kick listados pela Liquipedia. Nada de páginas de busca, cujos títulos e miniaturas dão spoiler.</li>
+<li>Uma série sendo jogada agora ganha o selo AO VIVO e aparece em <b>Ao vivo e começando em breve</b>; depois passa para <b>Encerradas recentemente</b>.</li></ul>
+<h2>Dados e atribuição</h2><ul><li>Partidas encerradas: API pública do <a href="https://www.opendota.com">OpenDota</a> (<code>/api/proMatches</code>).</li>
+<li>Agenda das próximas partidas, tiers e canais: <a href="https://liquipedia.net/dota2/Liquipedia:Matches">Liquipedia Dota 2</a>, sob a licença <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA 3.0</a>. Algumas poucas requisições à API por build (em cache, no máximo de hora em hora) com um User-Agent identificável, conforme os termos da API da Liquipedia.</li>
+<li>Há feeds de calendário (.ics) em cada página de torneio e de time.</li></ul><p>Dota 2 é uma marca registrada da Valve Corporation. Sem vínculo com a Valve, o OpenDota ou a Liquipedia.</p>
+<p class=tag>Última atualização: {built} UTC</p>""",
+ nl_title='Newsletter de Dota 2 sem spoilers | NoSpoilDota',nl_desc='Um e-mail semanal gratuito e sem spoilers com as séries de Dota 2 que valem a pena assistir.',
+ nl_body='<h1>O que assistir: e-mail semanal sem spoilers</h1><p>Um e-mail semanal gratuito com as séries de Dota 2 que valem a pena e onde encontrar os VODs. Sem vencedores, sem placares, nunca spoilers.</p>',
+ nl_foot="Grátis, um e-mail por semana, cancele quando quiser. Feito com <a href='https://buttondown.com'>Buttondown</a>.",
  hint='')}
+LANGS=('en','es','pt'); HLANG={'en':'en','es':'es','pt':'pt-BR'}; PFX={'en':'','es':'es/','pt':'pt/'}
+HINTS={'es':'¿Prefieres español? <a href="{u}">Ver esta página en español →</a>','pt':'Prefere português? <a href="{u}">Ver esta página em português →</a>'}
 LG='en'; L=STR['en']; RP=''; LROOT=SITE
 def set_lang(lg):
     global LG,L,RP,LROOT
-    LG=lg; L=STR[lg]; RP='' if lg=='en' else '../'; LROOT=SITE if lg=='en' else SITE+'es/'
-DOW={'en':'Mon Tue Wed Thu Fri Sat Sun'.split(),'es':'lun mar mié jue vie sáb dom'.split()}
-MON={'en':'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(),'es':'ene feb mar abr may jun jul ago sep oct nov dic'.split()}
+    LG=lg; L=STR[lg]; RP='' if lg=='en' else '../'; LROOT=SITE+PFX[lg]
+DOW={'en':'Mon Tue Wed Thu Fri Sat Sun'.split(),'es':'lun mar mié jue vie sáb dom'.split(),'pt':'seg ter qua qui sex sáb dom'.split()}
+MON={'en':'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(),'es':'ene feb mar abr may jun jul ago sep oct nov dic'.split(),'pt':'jan fev mar abr mai jun jul ago set out nov dez'.split()}
 def fdate(ts):
     """No-JS fallback date in the page language (UTC); app.js replaces it with local time."""
     d=dt.datetime.fromtimestamp(ts,dt.timezone.utc)
-    return f"{DOW[LG][d.weekday()]}, {d.day} {MON[LG][d.month-1]}, {d:%H:%M} UTC" if LG=='es' else f"{DOW[LG][d.weekday()]}, {MON[LG][d.month-1]} {d.day}, {d:%H:%M} UTC"
+    return f"{DOW[LG][d.weekday()]}, {d.day} {MON[LG][d.month-1]}, {d:%H:%M} UTC" if LG!='en' else f"{DOW[LG][d.weekday()]}, {MON[LG][d.month-1]} {d.day}, {d:%H:%M} UTC"
 ASSET_V=hashlib.md5((CSS+JS).encode()).hexdigest()[:10]
 BD="nospoildota"
 def signup(compact=True):
@@ -272,18 +309,16 @@ def signup(compact=True):
     return f
 def page(title,body,depth=0,cur=None,path="",desc=None,ld=None):
     """depth = levels below the language root; RP climbs from /es/ back to the shared assets at the site root."""
-    p="../"*depth; r=p+RP; can=LROOT+path; en_u=SITE+path; es_u=SITE+"es/"+path
+    p="../"*depth; r=p+RP; can=LROOT+path
     if LG=='en': PAGES.append(path)
     desc=desc or L['desc']
     ldj=f'<script type="application/ld+json">{json.dumps(ld,ensure_ascii=False).replace("</","<\\/")}</script>' if ld else ""
     NAV=[("index.html",L['matches']),("tournaments.html",L['tournaments']),("teams.html",L['teams']),("about.html",L['about'])]
     nav="".join(f"<a href='{p}{h}'{' aria-current=page' if h==cur else ''}>{t}</a>" for h,t in NAV)
-    rel_en,rel_es="/"+path,"/es/"+path
-    sw=(f"<span class=lang><a href='{rel_en}' hreflang=en lang=en{' aria-current=true' if LG=='en' else ''}>EN</a> | "
-        f"<a href='{rel_es}' hreflang=es lang=es{' aria-current=true' if LG=='es' else ''}>ES</a></span>")
-    hint=f"<p id=eshint class=note lang=es hidden>{L['hint'].format(es=rel_es)}</p>" if LG=='en' else ""
-    alt=(f'<link rel=alternate hreflang=en href="{en_u}"><link rel=alternate hreflang=es href="{es_u}"><link rel=alternate hreflang=x-default href="{en_u}">')
-    return f"""<!doctype html><html lang={LG}><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{e(title)}</title>
+    sw="<span class=lang>"+" | ".join(f"<a href='/{PFX[x]}{path}' hreflang={HLANG[x]} lang={HLANG[x]}{' aria-current=true' if LG==x else ''}>{x.upper()}</a>" for x in LANGS)+"</span>"
+    hint="".join(f"<p id={x}hint class=note lang={HLANG[x]} hidden>{HINTS[x].format(u='/'+PFX[x]+path)}</p>" for x in ('es','pt') if x!=LG and not (x=='es' and LG!='en'))
+    alt="".join(f'<link rel=alternate hreflang={HLANG[x]} href="{SITE+PFX[x]+path}">' for x in LANGS)+f'<link rel=alternate hreflang=x-default href="{SITE+path}">'
+    return f"""<!doctype html><html lang={HLANG[LG]}><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name=description content="{e(desc)}"><link rel=canonical href="{can}">{alt}<meta property=og:type content=website><meta property=og:site_name content=NoSpoilDota><meta property=og:locale content={L['locale']}><meta property=og:title content="{e(title)}"><meta property=og:description content="{e(desc)}"><meta property=og:url content="{can}"><meta name=twitter:card content=summary><meta name=color-scheme content=dark>{ldj}<link rel=stylesheet href="{r}style.css?v={ASSET_V}"></head><body>
 <a class=skip href="#main">{L['skip']}</a><header><a class=logo href="{p}index.html">NoSpoil<span>Dota</span></a>{sw}<nav aria-label={L['main_nav']}>{nav}</nav></header>
 <main id=main>{hint}{body}</main><footer>{L['foot'].format(p=p)}</footer><script src="{r}app.js?v={ASSET_V}" defer></script><script data-goatcounter="https://nospoildota.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></body></html>"""
@@ -339,13 +374,15 @@ def pick_streams(name,org,st):
     # main/official tier (Liquipedia slot 1 + curated organizer channels) always ahead of secondary channels, any platform
     return sorted(st,key=lambda c:order[c[0]])+[c for c in sec if c not in st]
 PL={'twitch':'Twitch','youtube':'YouTube','kick':'Kick'}
+def is_pt(ch): return bool(re.search(r'(^|[_.-])(pt|br|ptbr|pt_br|bra)([_.-]|\d*$)|brasil|brazil|ptbr',ch.lower()))
 def is_es(ch): return bool(re.search(r'(^|[_.-])(es|esp|spa|spanish|latam|lat)([_.-]|\d*$)|espanol|español',ch.lower()))
 def lang_streams(st):
     """Spanish pages: per platform, move a Spanish-language channel (e.g. nexusmedia_es) into that platform's first slot."""
-    if LG!='es': return st
+    if LG=='en': return st
+    mark=is_es if LG=='es' else is_pt
     st=list(st)
     for pl in PL:
-        sp=[c for c in st if c[0]==pl and is_es(c[1])]
+        sp=[c for c in st if c[0]==pl and mark(c[1])]
         firsts=[i for i,c in enumerate(st) if c[0]==pl]
         if sp and firsts and st[firsts[0]]!=sp[0]:
             st.remove(sp[0]); st.insert(firsts[0],sp[0])
@@ -459,8 +496,8 @@ def build():
     has_top=any((s.get('tier') or 9)<=2 for s in upcoming)
     radio=lambda v,l,chk: f"<label class=pill><input type=radio name=tier value={v}{' checked' if chk else ''}><span>{l}</span></label>"
     for d_ in ("cal/t","cal/team"): os.makedirs(f"{OUT}/{d_}",exist_ok=True)
-    for lg in ('en','es'):
-        set_lang(lg); O=OUT if lg=='en' else OUT+'/es'
+    for lg in LANGS:
+        set_lang(lg); O=OUT+'/'+PFX[lg].rstrip('/') if PFX[lg] else OUT
         for d_ in ("t","team"): os.makedirs(f"{O}/{d_}",exist_ok=True)
         W=lambda rel,html_: open(f"{O}/{rel}","w").write(html_)
         filt=(f"<form id=filters class=filters role=search onsubmit='return false'><fieldset><legend>{L['lg_tier']}</legend>{radio(1,L['t1'],False)}{radio(2,L['t12'],has_top)}{radio(3,L['t13'],False)}{radio('all',L['all'],not has_top)}</fieldset><fieldset><legend>{L['lg_fol']}</legend><label class=pill><input type=checkbox id=mine><span>{L['mine']}</span></label><label class=pill><input type=checkbox id=ffirst><span>{L['ffirst']}</span></label></fieldset>"
@@ -503,10 +540,10 @@ def build():
             if x.rsplit('.',1)[0] not in keep[d_.split('/')[-1]]: os.remove(f"{OUT}/{d_}/{x}")
     open(f"{OUT}/style.css","w").write(CSS); open(f"{OUT}/app.js","w").write(JS)
     lm=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d')
-    def urlent(loc,p): return (f"<url><loc>{e(loc)}</loc><lastmod>{lm}</lastmod><xhtml:link rel=\"alternate\" hreflang=\"en\" href=\"{e(SITE+p)}\"/>"
-        f"<xhtml:link rel=\"alternate\" hreflang=\"es\" href=\"{e(SITE+'es/'+p)}\"/><xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"{e(SITE+p)}\"/></url>")
+    def urlent(loc,p): return (f"<url><loc>{e(loc)}</loc><lastmod>{lm}</lastmod>"+"".join(f"<xhtml:link rel=\"alternate\" hreflang=\"{HLANG[x]}\" href=\"{e(SITE+PFX[x]+p)}\"/>" for x in LANGS)
+        +f"<xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"{e(SITE+p)}\"/></url>")
     open(f"{OUT}/sitemap.xml","w").write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">'
-        +"".join(urlent(SITE+p,p)+urlent(SITE+'es/'+p,p) for p in PAGES)+"</urlset>\n")
+        +"".join(urlent(SITE+PFX[x]+p,p) for p in PAGES for x in LANGS)+"</urlset>\n")
     open(f"{OUT}/robots.txt","w").write(f"User-agent: *\nAllow: /\nSitemap: {SITE}sitemap.xml\n")
     open(f"{OUT}/CNAME","w").write("nospoildota.com\n")
     stats={"opendota_maps":len(raw),"opendota_series":len(recent),"liquipedia_upcoming":len(up),"live":len(live),"upcoming_7d":len(soon),
