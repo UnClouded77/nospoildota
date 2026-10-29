@@ -9,6 +9,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+# One build/deploy at a time; a queued run waits (never overlaps) and newer queued runs replace older pending ones.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -20,7 +21,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python3 build.py
+      - name: Restore API cache (last good data)
+        uses: actions/cache/restore@v4
+        with:
+          path: cache
+          key: api-cache-${{ github.run_id }}
+          restore-keys: api-cache-
+      - name: Build (fails on empty/suspicious data so Pages keeps the previous deploy)
+        run: python3 build.py
+        timeout-minutes: 15
+      - name: Save API cache
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: cache
+          key: api-cache-${{ github.run_id }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

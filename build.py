@@ -2,22 +2,44 @@
 """NoSpoilDota static site builder. Usage: python3 build.py  -> writes ./site/
 Data: OpenDota /proMatches (finished maps) + Liquipedia MatchTicker via the parse API
 (upcoming/live + tiers, CC-BY-SA 3.0; ONE request per build with an identifying UA, cached 1h)."""
-import base64,json, re, time, html, os, urllib.request, urllib.parse, datetime as dt, hashlib, unicodedata
+import sys,base64,json, re, time, html, os, urllib.request, urllib.parse, datetime as dt, hashlib, unicodedata
 from collections import defaultdict
 ROOT=os.path.dirname(os.path.abspath(__file__)); OUT=os.path.join(ROOT,'site'); CACHE=os.path.join(ROOT,'cache')
 UA="NoSpoilDota/0.2 (https://nospoildota.com/; https://github.com/UnClouded77/nospoildota; non-commercial)"
 SITE="https://nospoildota.com/"
 os.makedirs(OUT,exist_ok=True); os.makedirs(CACHE,exist_ok=True)
 e=html.escape
-def get(url,name,ttl=3600,data=None):
-    p=os.path.join(CACHE,name)
-    if os.path.exists(p) and time.time()-os.path.getmtime(p)<ttl: return json.load(open(p))
+FBDIR=os.path.join(ROOT,'data','fallback')  # last-good snapshots committed to git (used only if live fetch AND cache fail)
+_LP_LAST=[0.0]
+def _fetch(url,data):
+    if 'liquipedia.net' in url:  # Liquipedia API terms: <=1 req/2s, parse <=1 req/30s
+        gap=30 if data else 2; w=_LP_LAST[0]+gap-time.time()
+        if w>0: time.sleep(w)
+        _LP_LAST[0]=time.time()
     req=urllib.request.Request(url,data=data,headers={"User-Agent":UA,"Accept-Encoding":"gzip"})
     with urllib.request.urlopen(req,timeout=30) as r:
         b=r.read()
         if r.headers.get("Content-Encoding")=="gzip":
             import gzip; b=gzip.decompress(b)
-    d=json.loads(b); json.dump(d,open(p,'w')); return d
+    return json.loads(b)
+def get(url,name,ttl=3600,data=None):
+    p=os.path.join(CACHE,name)
+    if os.path.exists(p) and time.time()-os.path.getmtime(p)<ttl: return json.load(open(p))
+    lp='liquipedia.net' in url; tries=2 if lp else 3  # Liquipedia: one retry only, long backoff; no retry storms
+    for i in range(tries):
+        try: d=_fetch(url,data); json.dump(d,open(p,'w')); return d
+        except Exception as x:
+            code=getattr(x,'code',None); last=x
+            if i==tries-1 or (code is not None and code!=429 and code<500): break
+            ra=getattr(x,'headers',None) and x.headers.get('Retry-After')
+            try: wait=int(ra)
+            except (TypeError,ValueError): wait=0
+            wait=max(wait,90 if lp else 5*(i+1)); wait=min(wait,300)
+            print(f"{name}: {x}; retrying in {wait}s"); time.sleep(wait)
+    for q in (p,os.path.join(FBDIR,name)):  # stale cache (actions cache), then committed snapshot
+        if os.path.exists(q):
+            print(f"WARNING: {name} fetch failed ({last}); using stale {q}"); return json.load(open(q))
+    raise last
 def slug(s):
     a=re.sub(r'[^a-z0-9]+','-',s.lower()).strip('-')[:60]
     return a if len(a)>=4 and not a[0].isdigit() else (a+'-' if a else 't-')+hashlib.md5(s.encode()).hexdigest()[:6]
@@ -507,6 +529,10 @@ def build():
         k=tour_key(s['league']); TN.setdefault(k,tour_name(s['league'])); TT[k]=min(TT.get(k,9),s['tier']); 
         if s.get('lp'): TL.setdefault(k,s['lp'].split('/dota2/')[1].split('/')[0])
         if s.get('lp'): TLF.setdefault(k,urllib.parse.unquote(s['lp'].split('/dota2/')[1]))
+    tp=os.path.join(CACHE,'tour_tiers.json'); fp=os.path.join(FBDIR,'tour_tiers.json')
+    old=json.load(open(tp if os.path.exists(tp) else fp)) if (os.path.exists(tp) or os.path.exists(fp)) else {}
+    for k,v in old.items(): TT.setdefault(k,v)
+    json.dump(TT,open(tp,'w'))
     for s in recent: TN.setdefault(tour_key(s['league']),tour_name(s['league']))
     LS=fetch_tour_streams(TLF.values()); TS={}
     for k in TN:
@@ -622,5 +648,7 @@ def build():
     stats={"opendota_maps":len(raw),"opendota_series":len(recent),"liquipedia_upcoming":len(up),"live":len(live),"upcoming_7d":len(soon),
            "merged_live":len(used),"tournaments":len(tours),"teams":len(tm),"pages_per_lang":len(PAGES),"tiers":{t:sum(1 for s in up if s['tier']==t) for t in (1,2,3,4)}}
     json.dump(stats,open(f"{OUT}/stats.json","w")); print(stats)
+    bad=[m for m,c in (("Liquipedia upcoming",len(up)<5),("OpenDota series",len(recent)<10),("tier-1 matches",not any(s.get('tier')==1 for s in up+recent))) if c]
+    if bad: sys.exit("ERROR: suspiciously little data ("+", ".join(bad)+"); failing so Pages keeps the previous deploy")
     for n in sorted(MISSING): print(f"WARNING: CJK name without translation in data/name_translations.json: {n}")
 if __name__=="__main__": build()
