@@ -83,6 +83,8 @@ def fetch_upcoming():
             tn=re.search(r'match-info-tournament-name"><a [^>]*><span>([^<]+)',blk)
             tl=re.search(r'match-info-tournament-name"><a href="(/dota2/[^"#]+)',blk)
             bo=re.search(r'\(Bo(\d)\)',blk)
+            stg=re.search(r'match-info-tournament-name"><a href="/dota2/[^"#]*#([^"]+)"',blk)
+            rid=re.search(r'Match:ID_([A-Za-z0-9]+)_R(\d+)-M(\d+)',blk)
             if not ts or not tn: continue
             teams=[(html.unescape(re.sub(r'\s*\((page does not exist|stack)\)','',re.sub(r'\s*\(page does not exist\)','',a))) or b).strip() or 'TBD' for a,b in names][:2]
             while len(teams)<2: teams.append('TBD')
@@ -91,7 +93,9 @@ def fetch_upcoming():
             if key in seen: continue
             seen.add(key)
             res.append({"teams":teams,"league":html.unescape(tn.group(1)),"lp":tl.group(1) if tl else None,"start":t,
-                        "bo":int(bo.group(1)) if bo else 1,"tier":int(tier),"streams":streams})
+                        "bo":int(bo.group(1)) if bo else 1,"tier":int(tier),"streams":streams,
+                        "stage":urllib.parse.unquote(stg.group(1)).replace('_',' ') if stg else '',"rnd":int(rid.group(2)) if rid else None,
+                        "mid":rid.group(0) if rid else None})
     return res
 
 # ---------- presentation ----------
@@ -161,6 +165,8 @@ document.querySelectorAll('.byday').forEach(box=>{let last='';[...box.children].
 const tz=document.getElementById('tzname');if(tz)tz.textContent=Intl.DateTimeFormat().resolvedOptions().timeZone||T.tz;
 document.addEventListener('click',ev=>{const b=ev.target.closest('.reveal');if(b){const r=document.getElementById(b.dataset.for);
  if(!r.hidden){r.hidden=true;b.textContent=T.rv;b.setAttribute('aria-expanded','false')}else if(confirm(T.cf)){r.hidden=false;b.textContent=T.hd;b.setAttribute('aria-expanded','true')}return}
+ const st=ev.target.closest('.steams');if(st){const dec=x=>new TextDecoder().decode(Uint8Array.from(atob(x),y=>y.charCodeAt(0))),c=st.closest('.m');
+ try{c.querySelector('.tn').innerHTML=dec(st.dataset.h);c.dataset.teams=dec(st.dataset.k);c.dataset.search+=' '+dec(st.dataset.q)}catch(_){}st.remove();paint();return}
  const w=ev.target.closest('.wres');if(w){if(w.dataset.done)return;w.dataset.done=1;let n='';try{n=new TextDecoder().decode(Uint8Array.from(atob(w.dataset.w),x=>x.charCodeAt(0)))}catch(_){}
  w.textContent=n?T.won.replace('%s',n):T.na;w.classList.add('shown');return}
  const c=ev.target.closest('.copy');if(c&&navigator.clipboard){navigator.clipboard.writeText(c.dataset.copy);c.textContent=T.cp}});
@@ -187,7 +193,7 @@ F.addEventListener('change',apply);document.addEventListener('nsd-follow',()=>{i
 
 # ---------- UI strings (en / es-419) ----------
 STR={
-'en':dict(locale='en_US',matches='Matches',tournaments='Tournaments',teams='Teams',about='About',skip='Skip to content',main_nav='Main',
+'en':dict(locale='en_US',po_r='Playoff match · round {r}',po='Playoff match',showteams='Show teams',later='Later-round matches',later_note='Hidden: listing them would reveal how this team did. Each stays behind <b>Show teams</b>.',later_none='none right now',matches='Matches',tournaments='Tournaments',teams='Teams',about='About',skip='Skip to content',main_nav='Main',
  foot='Match data: <a href="https://www.opendota.com">OpenDota</a> · Schedule, tiers &amp; streams: <a href="https://liquipedia.net/dota2/">Liquipedia</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA 3.0</a>) · Not affiliated with Valve · Times in your timezone (<span id=tzname>local</span>) · <a href="{p}newsletter.html">Newsletter</a>',
  desc='Spoiler-free Dota 2 pro match calendar and replay finder: schedules, live badges and official streams with no scores.',
  ch='Live channel',wl='Watch live',ch_title='Official live channel',follow='Follow',tier_title='Liquipedia tier {n}',
@@ -222,7 +228,7 @@ STR={
  nl_body='<h1>What to watch: weekly spoiler-free email</h1><p>A free weekly email with the Dota 2 series worth watching and where to find the VODs. No winners, no scores, no spoilers, ever.</p>',
  nl_foot="Free, one email a week, unsubscribe anytime. Powered by <a href='https://buttondown.com'>Buttondown</a>.",
  hint=''),
-'es':dict(locale='es_419',matches='Partidas',tournaments='Torneos',teams='Equipos',about='Acerca de',skip='Saltar al contenido',main_nav='Principal',
+'es':dict(locale='es_419',po_r='Partido de playoffs · ronda {r}',po='Partido de playoffs',showteams='Mostrar equipos',later='Partidos de rondas posteriores',later_note='Ocultos: mostrarlos revelaría cómo le fue a este equipo. Cada uno queda detrás de <b>Mostrar equipos</b>.',later_none='ninguno por ahora',matches='Partidas',tournaments='Torneos',teams='Equipos',about='Acerca de',skip='Saltar al contenido',main_nav='Principal',
  foot='Datos de partidas: <a href="https://www.opendota.com">OpenDota</a> · Calendario, tiers y streams: <a href="https://liquipedia.net/dota2/">Liquipedia</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA 3.0</a>) · Sin afiliación con Valve · Horarios en tu zona horaria (<span id=tzname>local</span>) · <a href="{p}newsletter.html">Boletín</a>',
  desc='Calendario de partidas profesionales de Dota 2 sin spoilers y buscador de repeticiones: horarios, avisos en vivo y streams oficiales, sin marcadores.',
  ch='Canal en vivo',wl='Ver en vivo',ch_title='Canal oficial en vivo',follow='Seguir',tier_title='Tier {n} de Liquipedia',
@@ -257,7 +263,7 @@ STR={
  nl_body='<h1>Qué ver: correo semanal sin spoilers</h1><p>Un correo semanal gratuito con las series de Dota 2 que vale la pena ver y dónde encontrar los VODs. Sin ganadores, sin marcadores, nunca spoilers.</p>',
  nl_foot="Gratis, un correo por semana, cancela cuando quieras. Funciona con <a href='https://buttondown.com'>Buttondown</a>.",
  hint=''),
-'pt':dict(locale='pt_BR',matches='Partidas',tournaments='Torneios',teams='Times',about='Sobre',skip='Pular para o conteúdo',main_nav='Principal',
+'pt':dict(locale='pt_BR',po_r='Partida dos playoffs · rodada {r}',po='Partida dos playoffs',showteams='Mostrar times',later='Partidas de rodadas seguintes',later_note='Ocultas: mostrá-las revelaria como este time se saiu. Cada uma fica atrás de <b>Mostrar times</b>.',later_none='nenhuma no momento',matches='Partidas',tournaments='Torneios',teams='Times',about='Sobre',skip='Pular para o conteúdo',main_nav='Principal',
  foot='Dados das partidas: <a href="https://www.opendota.com">OpenDota</a> · Agenda, tiers e transmissões: <a href="https://liquipedia.net/dota2/">Liquipedia</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA 3.0</a>) · Sem vínculo com a Valve · Horários no seu fuso (<span id=tzname>local</span>) · <a href="{p}newsletter.html">Newsletter</a>',
  desc='Agenda de partidas profissionais de Dota 2 sem spoilers e buscador de replays: horários, avisos ao vivo e transmissões oficiais, sem placares.',
  ch='Canal ao vivo',wl='Assistir ao vivo',ch_title='Canal oficial ao vivo',follow='Seguir',tier_title='Tier {n} da Liquipedia',
@@ -411,9 +417,13 @@ def card(s,d,ctx,TEAMS):
     live=s.get('live')
     tn=lambda x: e(x) if team_key(x) not in TEAMS else star(team_key(x),TEAMS[team_key(x)])+f"<a href='{'../'*d}team/{slug(TEAMS[team_key(x)])}.html'>{e(x)}</a>"
     tier=f"<span class=tier title='{L['tier_title'].format(n=s['tier'])}'>T{s['tier']}</span>" if s.get('tier') else ""
-    head=(f"<div class=when data-ts={s['start']} data-kind={'up' if ctx=='up' else 'done'}>{fdate(s['start'])}</div><div><div class=teams>{tn(a)}<span class=vs>vs</span>{tn(b)}"
+    real=f"{tn(a)}<span class=vs>vs</span>{tn(b)}"; hid=s.get('hid') and ctx=='up'
+    b64=lambda x: base64.b64encode(x.encode()).decode()
+    lab=e(L['po_r'].format(r=s['rnd']) if s.get('rnd') else L['po'])
+    tt=(f"<span class=tn>TBD<span class=vs>vs</span>TBD <span class=tag>· {lab}</span></span> <button type=button class='btn ghost mini steams' data-h=\"{b64(real)}\" data-k=\"{b64(' '.join(sorted(s['pair']-{'tbd'})))}\" data-q=\"{b64(f'{a} {b}'.lower())}\">{L['showteams']}</button>") if hid else f"<span class=tn>{real}</span>"
+    head=(f"<div class=when data-ts={s['start']} data-kind={'up' if ctx=='up' else 'done'}>{fdate(s['start'])}</div><div><div class=teams>{tt}"
           f"</div><div class=tag><a href='{'../'*d}t/{slug(s['tname'])}.html'>{e(s['tname'])}</a> · Bo{s['bo']}{tier}</div></div>")
-    attrs=f"class=m{' data-bo='+str(s['bo'])+(' data-live=1' if live else '') if ctx=='up' else ''} data-tier={s.get('tier') or 9} data-teams=\"{' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e(f'{a} {b} {s[chr(116)+"name"]}'.lower())}\""
+    attrs=f"class=m{' data-bo='+str(s['bo'])+(' data-live=1' if live else '') if ctx=='up' else ''} data-tier={s.get('tier') or 9} data-teams=\"{'' if hid else ' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e((s['tname'] if hid else f'{a} {b} '+s['tname']).lower())}\""
     if ctx=='up':
         return f"<div {attrs}>{head}<div class=acts>{watch_links(s,'btn ghost strm',2)}</div></div>"
     maps="<br>".join(f"<span class=rp>{L['replay'].format(i=i+1)} <code>{m['id']}</code> <button class='btn ghost mini copy' data-copy={m['id']}>{L['copy']}</button> <button type=button class='btn ghost mini wres' data-w=\"{base64.b64encode(m['w'].encode()).decode() if m.get('w') else ''}\" aria-live=polite>{L['showres']}</button></span>"
@@ -431,9 +441,9 @@ def ics(name,items,url):
     esc=lambda x: re.sub(r'([,;\\])',r'\\\1',x).replace('\n','\\n')
     stamp=f(time.time()); L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//NoSpoilDota//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",f"X-WR-CALNAME:{esc(name)} (NoSpoilDota)","X-PUBLISHED-TTL:PT2H","REFRESH-INTERVAL;VALUE=DURATION:PT2H"]
     for s in sorted(items,key=lambda x:x['start']):
-        uid=hashlib.md5(f"{s['start']}|{s['tk']}|{'|'.join(sorted(map(team_key,s['teams'])))}".encode()).hexdigest()
+        uid=hashlib.md5((f"{s['tk']}|{s['mid']}" if s.get('mid') else f"{s['start']}|{s['tk']}|{'|'.join(sorted(map(team_key,s['teams'])))}").encode()).hexdigest()
         L+=["BEGIN:VEVENT",f"UID:{uid}@nospoildota",f"DTSTAMP:{stamp}",f"DTSTART:{f(s['start'])}",f"DURATION:PT{max(1,s['bo'])}H",
-            "SUMMARY:"+esc(f"{s['teams'][0]} vs {s['teams'][1]} (Bo{s['bo']}) · {s['tname']}"),
+            "SUMMARY:"+esc((f"{STR['en']['po_r'].format(r=s['rnd']) if s.get('rnd') else STR['en']['po']} (Bo{s['bo']}) · {s['tname']}") if s.get('hid') and s['start']>time.time()-6*3600 else f"{s['teams'][0]} vs {s['teams'][1]} (Bo{s['bo']}) · {s['tname']}"),
             "DESCRIPTION:"+esc("Spoiler-free, no results. Watch links: "+url),f"URL:{url}","END:VEVENT"]
     L.append("END:VCALENDAR")
     def fold(x):  # RFC 5545: max 75 octets per line, never split a UTF-8 character
@@ -449,7 +459,7 @@ def events_ld(items,url,limit=50):
     """schema.org SportsEvent list. Teams, time, tournament only - never winners, scores or game counts."""
     ev=[]
     for s in sorted(items,key=lambda x:x['start'])[:limit]:
-        if s['pair']=={'tbd'}: continue
+        if s['pair']=={'tbd'} or s.get('hid'): continue
         ev.append({"@type":"SportsEvent","name":f"{s['teams'][0]} vs {s['teams'][1]} (Bo{s['bo']}) – {s['tname']}","sport":"Dota 2",
             "startDate":iso(s['start']),"eventAttendanceMode":"https://schema.org/OnlineEventAttendanceMode",
             "location":{"@type":"VirtualLocation","url":url},"url":url,"organizer":{"@type":"Organization","name":s['tname']},
@@ -483,6 +493,14 @@ def build():
         for i,r in enumerate(recent):
             if r['pair']==s['pair'] and abs(r['start']-s['start'])<=3*3600:
                 s['live']=True; used.add(i)
+    # Bracket spoiler guard: a playoff match past round 1, with a still-TBD slot, or with a team that already played in this
+    # tournament shows who advanced. Group-stage (round-robin day) matches carry no bracket round and stay visible.
+    played=defaultdict(dict)
+    for r in recent:
+        for t in r['pair']-{'tbd'}: played[r['tk']][t]=min(played[r['tk']].get(t,9e18),r['start'])
+    for s in up:
+        br=s.get('rnd') is not None or bool(re.search(r'(?i)playoff|bracket|final|knockout|elimination|decider',s.get('stage','')))
+        s['hid']=br and s['pair']!={'tbd'} and ((s.get('rnd') or 1)>1 or 'tbd' in s['pair'] or any(played[s['tk']].get(t,9e18)<s['start']-3600 for t in s['pair']-{'tbd'}))
     recent=[r for i,r in enumerate(recent) if i not in used]
     TEAMS={k:v for k,v in TEAMN.items() if k!='tbd'}
     upcoming=[s for s in up if s['start']<now+7*86400]; live=[s for s in upcoming if s['live']]; soon=upcoming
@@ -491,7 +509,11 @@ def build():
     for s in recent: tours[s['tk']]["done"].append(s)
     tm=defaultdict(lambda:{"up":[],"done":[]})
     for s in up:
-        for t in s['pair']-{'tbd'}: tm[t]["up"].append(s)
+        for t in s['pair']-{'tbd'}:
+            if not s['hid']: tm[t]["up"].append(s)
+    for s in up:
+        for t in s['pair']-{'tbd'}:
+            if s['hid'] and t in tm: tm[t].setdefault("hid",[]).append(s)
     for s in recent:
         for t in s['pair']-{'tbd'}: tm[t]["done"].append(s)
     keep={"t":{slug(TN[k]) for k in tours},"team":{slug(TEAMS[k]) for k in tm}}
@@ -539,9 +561,10 @@ def build():
             n=TEAMS[k]; sl=slug(n); url=f"{LROOT}team/{sl}.html"
             b=(f"<h1>{e(n)} {star(k,n,True)}</h1><p class=tag><a href='../{RP}cal/team/{sl}.ics'>{L['team_cal'].format(n=e(n))}</a> · {L['team_sf']}</p>"
                +sect(L['lu'],section(v['up'],'up',1,False),L['team_up_empty'],"h-up")
+               +f"<details class=tbd><summary>{L['later']}</summary><p class=tag>{L['later_note']}</p>{section(v['hid'],'up',1,False) if v.get('hid') else '<p class=empty>'+L['later_none']+'</p>'}</details>"
                +sect(L['recs'],section(v['done'],'done',1,False),L['recs_empty'],"h-done"))
             W(f"team/{sl}.html",page(L['team_title'].format(n=n),b,1,path=f"team/{sl}.html",desc=L['team_desc'].format(n=n),ld=events_ld(v['up']+v['done'],url)))
-            if lg=='en': open(f"{OUT}/cal/team/{sl}.ics","w",newline="").write(ics(n,v['up']+v['done'],url))
+            if lg=='en': open(f"{OUT}/cal/team/{sl}.ics","w",newline="").write(ics(n,v['up']+v['done'],url))  # hidden later-round matches are not in v['up']
         tl="".join(f"<li data-teams={k}>{star(k,TEAMS[k])}<a href='team/{slug(TEAMS[k])}.html'>{e(TEAMS[k])}</a> <span class=tag>{L['teams_counts'].format(u=len(tm[k]['up']),d=len(tm[k]['done']))}</span></li>" for k in sorted(tm,key=lambda k:TEAMS[k].lower()))
         W("teams.html",page(L['teams_title'],f"<h1>{L['teams']}</h1><p class=tag>{L['teams_intro']}</p><ul class=teamlist>"+tl+"</ul>",0,"teams.html",path="teams.html",desc=L['teams_desc']))
         W("about.html",page(L['about_title'],L['about_body'].replace('{built}',f"{dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M}"),0,"about.html",path="about.html",desc=L['about_desc']))
