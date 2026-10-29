@@ -147,7 +147,7 @@ document.querySelectorAll('.m[data-bo]').forEach(c=>{const ts=+c.querySelector('
  const live=(d<=0&&now<ts+bo*4500)||(c.dataset.live==='1'&&now<ts+bo*4500+7200),soon=!live&&d>0&&d<=3600;if(!live&&!soon)return;
  const t=c.querySelector('.teams'),bd=document.createElement('span');bd.className='badge'+(soon?' soon':'');bd.textContent=live?'LIVE':'SOON';t.append(bd);
  c.classList.add(live?'is-live':'is-soon');const w=c.querySelector('[data-kind]');if(w&&live){w.dataset.kind='live';w.querySelector('.rel').textContent='Live now'}
- const sw=c.querySelector('.strm');if(sw&&live){sw.classList.remove('ghost');sw.textContent='▶ Watch live'}
+ if(live)c.querySelectorAll('.strm').forEach(sw=>{sw.classList.remove('ghost');sw.textContent=sw.textContent.replace('Live channel','Watch live')});
  if(ls){ls.append(c)}});
 document.querySelectorAll('.byday').forEach(box=>{let last='';[...box.children].forEach(c=>{const w=c.querySelector('[data-ts]');if(!w)return;
  const k=new Date(+w.dataset.ts*1000).toDateString();if(k!==last){last=k;const h=document.createElement('h3');h.className='day';
@@ -194,11 +194,61 @@ def page(title,body,depth=0,cur=None,path="",desc=None,ld=None):
 <main id=main>{body}</main><footer>Match data: <a href="https://www.opendota.com">OpenDota</a> · Schedule, tiers &amp; streams: <a href="https://liquipedia.net/dota2/">Liquipedia</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA 3.0</a>) · Not affiliated with Valve · Times in your timezone (<span id=tzname>local</span>) · <a href="{p}newsletter.html">Newsletter</a></footer><script src="{p}app.js" defer></script></body></html>"""
 
 PAGES=[]
-def stream_url(pl,ch): return f"https://liquipedia.net/dota2/Special:Stream/{pl}/{urllib.parse.quote(ch)}"
+HANDLE={'twitch':r'[A-Za-z0-9_]{3,25}','kick':r'[A-Za-z0-9_-]{3,40}','youtube':r'@?[A-Za-z0-9_.-]{3,40}|channel/UC[A-Za-z0-9_-]{22}'}
+def stream_url(pl,ch):
+    """Direct LIVE channel URLs only (never /videos, VODs or search)."""
+    if pl=='twitch': return f"https://www.twitch.tv/{ch.lower()}"
+    if pl=='kick': return f"https://kick.com/{ch.lower()}"
+    return f"https://www.youtube.com/{ch if ch.startswith('channel/') else '@'+ch.lstrip('@')}/live"
+# Curated official channels (each URL checked with curl on 2026-10-28), matched against Liquipedia organizer / tournament name.
+FALLBACK=[(('the international','valve','dota2ti'),[('twitch','dota2ti'),('youtube','channel/UCTQKT5QqO3h7y32G8VzuySQ')]),
+  (('pgl',),[('twitch','pgl_dota2'),('youtube','PGL_Dota2'),('kick','pgldota2')]),
+  (('dreamleague','esl'),[('twitch','esl_dota2'),('youtube','ESLDota2')]),
+  (('blast',),[('twitch','blastdota'),('youtube','BLASTDota'),('kick','blastdota')]),
+  (('fissure',),[('twitch','fissure_dota_en'),('youtube','fiss_dota2_en'),('kick','fissure_dota_en')]),
+  (('pari',),[('youtube','PARIEsportsDOTA2')]),
+  (('epicenter',),[('twitch','epicenter_en1')]),
+  (('betboom',),[('youtube','BetBoomEsports')]),
+  (('epl','european pro league'),[('kick','epldota_en1')]),
+  (('esports pro circuit','epc'),[('twitch','epc_en')]),
+  (('nexus',),[('twitch','nexusmedia_en')])]
+def fetch_tour_streams(pages):
+    """ONE batched Liquipedia query for the tournament pages' wikitext -> {page:(organizer,[(platform,handle)])}."""
+    pages=sorted(set(pages))[:50]
+    if not pages: return {}
+    try:
+        u="https://liquipedia.net/dota2/api.php?"+urllib.parse.urlencode({"action":"query","prop":"revisions","rvprop":"content","rvslots":"main","format":"json","redirects":1,"titles":"|".join(p.replace('_',' ') for p in pages)})
+        d=get(u,"lp_streams.json",ttl=6*3600); time.sleep(2)
+    except Exception as x: print("Liquipedia streams failed:",x); return {}
+    q=d.get('query',{}); alias={x['to']:x['from'] for x in q.get('normalized',[])+q.get('redirects',[])}
+    out={}
+    for p in q.get('pages',{}).values():
+        w=(p.get('revisions') or [{}])[0].get('slots',{}).get('main',{}).get('*','')
+        org=' '.join(re.findall(r'\|organizer[0-9]*=([^|\n}]*)',w)[:3])
+        st=[]
+        for pl,n,v in re.findall(r'\|(twitch|youtube|kick)([0-9]*)=([^|\n}]*)',w):
+            v=v.strip()
+            if re.fullmatch(HANDLE[pl],v) and (pl,v.lower()) not in [(a,b.lower()) for a,b,_ in st]: st.append((pl,v,n in ('','1')))
+        t=p['title']
+        while t in alias: t=alias[t]
+        out[t.replace(' ','_')]=(org,st)
+    return out
+def pick_streams(name,org,st):
+    prim=[(a,b) for a,b,p in st if p]; sec=[(a,b) for a,b,p in st if not p]; st=prim
+    hay=f"{name} {org}".lower()
+    for keys,chans in FALLBACK:
+        if any(re.search(r'\b'+re.escape(k)+r'\b',hay) for k in keys):
+            for c in chans:
+                if c[0] not in [x[0] for x in st]: st.append(c)
+            break
+    order={'twitch':0,'youtube':1,'kick':2}
+    first=[];rest=[]
+    for c in st: (rest if c[0] in [x[0] for x in first] else first).append(c)
+    return sorted(first,key=lambda c:order[c[0]])+rest+[c for c in sec if c not in st]
 PL={'twitch':'Twitch','youtube':'YouTube','kick':'Kick'}
 def watch_links(s,cls="btn",n=2,live=False):
     """Official channels from Liquipedia's stream data only (no search pages, no titles/thumbnails that could spoil)."""
-    return "".join(f"<a class='{cls}' href='{stream_url(pl,ch)}' target=_blank rel='noopener nofollow' title='Official {PL.get(pl,pl.title())} channel: {e(ch)} (via Liquipedia)'>▶ {'Watch' if live else 'Official stream'} · {PL.get(pl,pl.title())}</a>" for pl,ch in s.get('streams',[])[:n])
+    return "".join(f"<a class='{cls}' href='{stream_url(pl,ch)}' target=_blank rel='noopener nofollow' title='Official live channel: {e(ch)}'>▶ {'Watch live' if live else 'Live channel'} · {PL.get(pl,pl.title())}{'' if n<3 else ' ('+e(ch.split('/')[-1].lstrip('@'))+')'}</a>" for pl,ch in s.get('streams',[])[:n]) if s.get('streams') else ""
 def star(k,n,big=False):
     lab=f"Follow {e(n)}"
     return f"<button type=button class='star{' big' if big else ''}' data-follow={k} aria-pressed=false aria-label='{lab}' title='{lab}'><span aria-hidden=true>☆</span>{'<span class=lbl>Follow</span>' if big else ''}</button>"
@@ -211,12 +261,12 @@ def card(s,d,ctx,TEAMS):
           f"</div><div class=tag><a href='{'../'*d}t/{slug(s['tname'])}.html'>{e(s['tname'])}</a> · Bo{s['bo']}{tier}</div></div>")
     attrs=f"class=m{' data-bo='+str(s['bo'])+(' data-live=1' if live else '') if ctx=='up' else ''} data-tier={s.get('tier') or 9} data-teams=\"{' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e(f'{a} {b} {s[chr(116)+"name"]}'.lower())}\""
     if ctx=='up':
-        acts=watch_links(s,"btn ghost strm",1)
+        acts=watch_links(s,"btn ghost strm",2)
         return f"<div {attrs}>{head}<div class=acts>{acts}</div></div>"
     maps="<br>".join(f"<span class=rp>Replay {i+1}: match ID <code>{m['id']}</code> <button class='btn ghost mini copy' data-copy={m['id']}>copy</button></span>"
                   for i,m in enumerate(sorted(s['maps'],key=lambda m:m['t'])))
     maps+="<br><span class=tag>Watch in the Dota 2 client: Watch → Replays → search the match ID (kept about two weeks). Stats sites such as OpenDota show the result.</span>"
-    return (f"<div {attrs}>{head}<div class=acts>{watch_links(s)}<button class='btn reveal' data-for={uid} aria-expanded=false aria-controls={uid}>Reveal replays</button></div>"
+    return (f"<div {attrs}>{head}<div class=acts><button class='btn reveal' data-for={uid} aria-expanded=false aria-controls={uid}>Reveal replays</button></div>"
             f"<div class=res id={uid} hidden>{maps}</div></div>")
 def tbd_block(items):
     if not items: return ""
@@ -250,18 +300,22 @@ def events_ld(items,url,limit=50):
     return {"@context":"https://schema.org","@graph":ev} if ev else None
 def build():
     raw,recent=fetch_recent(); up=fetch_upcoming(); now=time.time()
-    TN,TT,TS,TL={},{},defaultdict(set),{}
+    TN,TT,TL,TLF={},{},{},{}
     for s in up:
-        k=tour_key(s['league']); TN.setdefault(k,tour_name(s['league'])); TT[k]=min(TT.get(k,9),s['tier']); TS[k]|=set(s['streams'])
+        k=tour_key(s['league']); TN.setdefault(k,tour_name(s['league'])); TT[k]=min(TT.get(k,9),s['tier']); 
         if s.get('lp'): TL.setdefault(k,s['lp'].split('/dota2/')[1].split('/')[0])
+        if s.get('lp'): TLF.setdefault(k,urllib.parse.unquote(s['lp'].split('/dota2/')[1]))
     for s in recent: TN.setdefault(tour_key(s['league']),tour_name(s['league']))
+    LS=fetch_tour_streams(TLF.values()); TS={}
+    for k in TN:
+        org,st=LS.get(TLF.get(k,''),('',[])); TS[k]=pick_streams(TN[k],org,st)
     TEAMN={}  # canonical team display names, Liquipedia's full names first
     for s in up+recent:
         for t in s['teams']: TEAMN.setdefault(team_key(t),t)
     for s in up+recent:
         k=tour_key(s['league']); s['tk']=k; s['tname']=TN[k]; s['tier']=TT.get(k) or s.get('tier')
         s['teams']=['TBD' if team_key(t)=='tbd' else TEAMN[team_key(t)] for t in s['teams']]; s['pair']=frozenset(map(team_key,s['teams']))
-        s['streams']=sorted(TS.get(k,()))
+        s['streams']=TS.get(k,[])
     # One series = one place: a Liquipedia match with OpenDota maps already (same teams, start within 3h) is LIVE and hidden from "finished".
     used=set()
     for s in up:
@@ -304,7 +358,7 @@ def build():
     for k,v in tours.items():
         n=TN[k]; sl=slug(n); url=f"{SITE}t/{sl}.html"
         lp=f"https://liquipedia.net/dota2/{TL[k]}" if k in TL else f"https://liquipedia.net/dota2/index.php?search={urllib.parse.quote_plus(n)}"
-        strm=watch_links({"streams":sorted(TS.get(k,()))},"btn",6) or "<span class=tag>Official streams not listed by Liquipedia yet.</span>"
+        strm=watch_links({"streams":TS.get(k,[])},"btn",6,True) or "<span class=tag>No official stream channel known yet.</span>"
         b=(f"<h1>{e(n)}{f' <span class=tier>Tier {TT[k]}</span>' if TT.get(k) else ''}</h1><div class=watch>{strm}</div>"
            f"<p class=tag><a href='../cal/t/{sl}.ics'>📅 Add to calendar (.ics)</a> · <a href='{lp}' rel=noopener>Liquipedia</a> (shows results) · times in your timezone</p>"
            +sect("Live &amp; upcoming",section(v['up'],'up',1,False),"None scheduled.","h-up")+sect("Finished",section(v['done'],'done',1,False),"None yet.","h-done"))
