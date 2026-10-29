@@ -98,7 +98,7 @@ CSS=""":root{--bg:#0f1115;--card:#181b22;--mut:#9aa3b5;--fg:#e8ebf1;--acc:#e0533
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 a{color:#ff9a82;text-decoration:none}a:hover{text-decoration:underline}:focus-visible{outline:2px solid #ffb199;outline-offset:2px}
 .skip{position:absolute;left:-9999px}.skip:focus{left:8px;top:8px;background:#000;padding:6px;z-index:9}
-header{border-bottom:1px solid var(--bd);padding:10px 16px;display:flex;gap:6px 18px;align-items:center;flex-wrap:wrap;position:sticky;top:0;background:#0f1115f2;z-index:5}
+header{border-bottom:1px solid var(--bd);padding:10px 16px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:'logo nav lang';gap:6px 18px;align-items:center;width:100%;max-width:100%;position:sticky;top:0;background:#0f1115f2;z-index:5}
 header .logo{font-weight:800;font-size:19px;color:var(--fg)}header .logo span{color:var(--acc)}nav{display:flex;flex-wrap:wrap;gap:4px 14px}nav a{color:var(--mut)}nav a[aria-current]{color:var(--fg)}
 main{max-width:920px;margin:0 auto;padding:14px 16px}h1{font-size:23px;margin:.3em 0}h2{font-size:18px;margin:1.4em 0 .4em;color:#d5dae6}
 h3{font-size:13px;margin:1.1em 0 .3em;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}h3 a{color:inherit}
@@ -134,7 +134,7 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:24px 16px;borde
 #ls:not(:has(.m)){display:none}h3.day{color:var(--fg);border-bottom:1px solid var(--bd);padding-bottom:3px}
 .watch{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.rp a{margin-right:8px}
 @media(max-width:640px){.star{min-width:44px;min-height:44px}.m{grid-template-columns:1fr}.m .when{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.m .when .rel{display:inline}.m .acts .btn{flex:1 1 auto;justify-content:center}.acts{justify-content:flex-start}main{padding:10px 12px}}"""
-CSS+="\nheader nav{order:1}.lang{order:2;flex:none;font-size:13px;color:var(--mut);border:1px solid var(--bd);border-radius:14px;padding:2px 10px;white-space:nowrap}.lang a{color:var(--mut);padding:2px}header .lang{margin-left:auto}@media(max-width:640px){header nav{order:3;flex-basis:100%}}.lang a[aria-current]{color:var(--fg);font-weight:700}#eshint{margin:6px 0}#eshint[hidden]{display:none}"
+CSS+="\nheader .logo{grid-area:logo}header nav{grid-area:nav;min-width:0}.lang{grid-area:lang;justify-self:end;font-size:13px;color:var(--mut);border:1px solid var(--bd);border-radius:14px;padding:2px 10px;white-space:nowrap}.lang a{color:var(--mut);padding:2px}@media(max-width:640px){header{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'logo lang' 'nav nav'}}.lang a[aria-current]{color:var(--fg);font-weight:700}#eshint{margin:6px 0}#eshint[hidden]{display:none}"
 JS=r"""(()=>{const HL=document.documentElement.lang,LG=HL==='es'?'es':HL==='pt-BR'?'pt':'en',LOC={es:'es',pt:'pt-BR',en:[]}[LG],T={pt:{live:'Ao vivo',inm:'em %s min',inh:'em %s h',today:'hoje ',tom:'começa amanhã',ind:'em %s dias',soon:'começando em breve',agom:'há %s min',agoh:'há %s h',yest:'ontem',agod:'há %s dias',LIVE:'AO VIVO',SOON:'EM BREVE',ch:'Canal ao vivo',wl:'Assistir ao vivo',rv:'Mostrar replays',hd:'Ocultar replays',cf:'Mostrar os links de replay? A quantidade de links revela quantos jogos foram disputados.',cp:'copiado',fol:'Seguir',unf:'Deixar de seguir',fing:'Seguindo',tz:'horário local'},es:{live:'En vivo',inm:'en %s min',inh:'en %s h',today:'hoy ',tom:'empieza mañana',ind:'en %s días',soon:'por comenzar',agom:'hace %s min',agoh:'hace %s h',yest:'ayer',agod:'hace %s días',LIVE:'EN VIVO',SOON:'PRONTO',ch:'Canal en vivo',wl:'Ver en vivo',rv:'Mostrar repeticiones',hd:'Ocultar repeticiones',cf:'¿Mostrar los enlaces de repetición? La cantidad de enlaces revela cuántos juegos se jugaron.',cp:'copiado',fol:'Seguir',unf:'Dejar de seguir',fing:'Siguiendo',tz:'hora local'},
 en:{live:'Live now',inm:'in %s min',inh:'in %sh',today:'today ',tom:'starts tomorrow',ind:'in %s days',soon:'starting soon',agom:'%s min ago',agoh:'%sh ago',yest:'yesterday',agod:'%s days ago',LIVE:'LIVE',SOON:'SOON',ch:'Live channel',wl:'Watch live',rv:'Reveal replays',hd:'Hide replays',cf:'Show replay links? The number of links shows how many games were played.',cp:'copied',fol:'Follow',unf:'Unfollow',fing:'Following',tz:'local time'}}[LG],
 f=(k,n)=>T[k].replace('%s',n);
@@ -307,10 +307,11 @@ def signup(compact=True):
     f=f"""<form action="https://buttondown.com/api/emails/embed-subscribe/{BD}" method="post" target="popupwindow" onsubmit="window.open('https://buttondown.com/{BD}', 'popupwindow')"><label for=bd-email class=sr>{L['email']}</label><input type=email name="email" id=bd-email required placeholder="{L['email_ph']}"> <button type=submit>{L['subscribe']}</button></form>"""
     if compact: return f"<details class=signup><summary>{L['sub_summary']}</summary>{f}</details>"
     return f
-def page(title,body,depth=0,cur=None,path="",desc=None,ld=None):
+def page(title,body,depth=0,cur=None,path="",desc=None,ld=None,nolist=False):
     """depth = levels below the language root; RP climbs from /es/ back to the shared assets at the site root."""
     p="../"*depth; r=p+RP; can=LROOT+path
-    if LG=='en': PAGES.append(path)
+    if nolist: p=r='/'  # 404 is served at arbitrary depths: absolute links
+    if LG=='en' and not nolist: PAGES.append(path)
     desc=desc or L['desc']
     ldj=f'<script type="application/ld+json">{json.dumps(ld,ensure_ascii=False).replace("</","<\\/")}</script>' if ld else ""
     NAV=[("index.html",L['matches']),("tournaments.html",L['tournaments']),("teams.html",L['teams']),("about.html",L['about'])]
@@ -530,6 +531,8 @@ def build():
         tl="".join(f"<li data-teams={k}>{star(k,TEAMS[k])}<a href='team/{slug(TEAMS[k])}.html'>{e(TEAMS[k])}</a> <span class=tag>{L['teams_counts'].format(u=len(tm[k]['up']),d=len(tm[k]['done']))}</span></li>" for k in sorted(tm,key=lambda k:TEAMS[k].lower()))
         W("teams.html",page(L['teams_title'],f"<h1>{L['teams']}</h1><p class=tag>{L['teams_intro']}</p><ul class=teamlist>"+tl+"</ul>",0,"teams.html",path="teams.html",desc=L['teams_desc']))
         W("about.html",page(L['about_title'],L['about_body'].replace('{built}',f"{dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M}"),0,"about.html",path="about.html",desc=L['about_desc']))
+        if lg=='en': W("404.html",page({'en':'Page not found | NoSpoilDota','es':'Página no encontrada | NoSpoilDota','pt':'Página não encontrada | NoSpoilDota'}[lg],
+            {'en':"<h1>Page not found</h1><p><a href='/'>Go to the spoiler-free schedule →</a></p>",'es':"<h1>Página no encontrada</h1><p><a href='/es/'>Ir al calendario sin spoilers →</a></p>",'pt':"<h1>Página não encontrada</h1><p><a href='/pt/'>Ir para a agenda sem spoilers →</a></p>"}[lg],path="",nolist=True))
         W("newsletter.html",page(L['nl_title'],L['nl_body']+signup(False)+f"<p class=tag>{L['nl_foot']}</p>",path="newsletter.html",desc=L['nl_desc']))
         for d_ in ("t","team"):  # prune stale pages from earlier local builds
             for x in os.listdir(f"{O}/{d_}"):
