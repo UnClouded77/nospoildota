@@ -242,9 +242,8 @@ def pick_streams(name,org,st):
                 if c[0] not in [x[0] for x in st]: st.append(c)
             break
     order={'twitch':0,'youtube':1,'kick':2}
-    first=[];rest=[]
-    for c in st: (rest if c[0] in [x[0] for x in first] else first).append(c)
-    return sorted(first,key=lambda c:order[c[0]])+rest+[c for c in sec if c not in st]
+    # main/official tier (Liquipedia slot 1 + curated organizer channels) always ahead of secondary channels, any platform
+    return sorted(st,key=lambda c:order[c[0]])+[c for c in sec if c not in st]
 PL={'twitch':'Twitch','youtube':'YouTube','kick':'Kick'}
 def watch_links(s,cls="btn",n=2,live=False,all_=False):
     """Official channels from Liquipedia's stream data only (no search pages, no titles/thumbnails that could spoil)."""
