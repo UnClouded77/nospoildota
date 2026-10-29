@@ -63,8 +63,7 @@ def fetch_recent():
         s=ser.setdefault(k,{"teams":sorted([rn,dn],key=str.lower),"league":m.get('league_name') or 'Unknown',"leagueid":m['leagueid'],
             "start":m['start_time'],"maps":[],"bo":{0:1,1:3,2:5,3:2}.get(m.get('series_type'),1)})
         s["start"]=min(s["start"],m['start_time'])
-        s["maps"].append({"id":m['match_id'],"t":m['start_time'],"win":(rn if m['radiant_win'] else dn),
-                          "score":f"{m['radiant_score']}–{m['dire_score']}","dur":f"{(m.get('duration') or 0)//60}m"})
+        s["maps"].append({"id":m['match_id'],"t":m['start_time']})  # deliberately no winner/score/duration
     return out,list(ser.values())
 LP_TEXT="".join(f'<div id="nsd-tier-{t}">{{{{#invoke:Lua|invoke|module=MatchTicker/Custom|fn=mainPage|dev=false|type=upcoming|limit=60|filterbuttons-liquipediatier={t}}}}}</div>' for t in (1,2,3,4))
 def fetch_upcoming():
@@ -131,7 +130,10 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:24px 16px;borde
 .star:hover{color:#ffc94d;border-color:var(--bd)}.star[aria-pressed=true]{color:#ffc94d}.star.big{font-size:15px;border-color:var(--bd);padding:6px 12px;margin:0 0 0 8px;display:inline-flex;gap:6px;align-items:center}.star.big[aria-pressed=true]{background:#3a2f10;border-color:#ffc94d}
 .m.fav{border-color:#ffc94d;background:linear-gradient(90deg,#2a2412,var(--card) 60%);box-shadow:inset 4px 0 0 #ffc94d}.m.fav .when .rel::before{content:"★ ";color:#ffc94d}li.fav a{color:#ffc94d}
 .vs+.star{margin-left:0}
-@media(max-width:640px){.star{min-width:44px;min-height:44px}.m{grid-template-columns:1fr}.m .when{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.m .when .rel{display:inline}.acts{justify-content:flex-start}main{padding:10px 12px}}"""
+.badge.soon{background:#2d6cdf}.badge.soon::before{content:"◷ "}.m.is-soon{border-color:#2d4f8a}
+#ls:not(:has(.m)){display:none}h3.day{color:var(--fg);border-bottom:1px solid var(--bd);padding-bottom:3px}
+.watch{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.rp a{margin-right:8px}
+@media(max-width:640px){.star{min-width:44px;min-height:44px}.m{grid-template-columns:1fr}.m .when{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.m .when .rel{display:inline}.m .acts .btn{flex:1 1 auto;justify-content:center}.acts{justify-content:flex-start}main{padding:10px 12px}}"""
 JS=r"""(()=>{const now=Date.now()/1000,fmt=new Intl.DateTimeFormat([], {weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),
 tf=new Intl.DateTimeFormat([], {hour:'2-digit',minute:'2-digit'}),day=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()};
 function rel(ts,kind){const d=ts-now,a=Math.abs(d),dd=Math.round((day(ts*1000)-day(Date.now()))/864e5),t=tf.format(new Date(ts*1000));
@@ -140,9 +142,19 @@ function rel(ts,kind){const d=ts-now,a=Math.abs(d),dd=Math.round((day(ts*1000)-d
  if(kind==='up')return'starting soon';if(a<3600)return Math.round(a/60)+' min ago';if(a<86400)return Math.round(a/3600)+'h ago';if(dd===-1)return'yesterday';return Math.round(a/86400)+' days ago'}
 document.querySelectorAll('[data-ts]').forEach(e=>{const ts=+e.dataset.ts,full=fmt.format(new Date(ts*1000)),r=rel(ts,e.dataset.kind);
  e.textContent='';if(r){const s=document.createElement('span');s.className='rel';s.textContent=r;e.append(s,' ')}e.append(full);e.title=full});
+const ls=document.getElementById('ls-list');
+document.querySelectorAll('.m[data-bo]').forEach(c=>{const ts=+c.querySelector('[data-ts]').dataset.ts,bo=+c.dataset.bo||1,d=ts-now;
+ const live=(d<=0&&now<ts+bo*4500)||(c.dataset.live==='1'&&now<ts+bo*4500+7200),soon=!live&&d>0&&d<=3600;if(!live&&!soon)return;
+ const t=c.querySelector('.teams'),bd=document.createElement('span');bd.className='badge'+(soon?' soon':'');bd.textContent=live?'LIVE':'SOON';t.append(bd);
+ c.classList.add(live?'is-live':'is-soon');const w=c.querySelector('[data-kind]');if(w&&live){w.dataset.kind='live';w.querySelector('.rel').textContent='Live now'}
+ const sw=c.querySelector('.strm');if(sw&&live){sw.classList.remove('ghost');sw.textContent='▶ Watch live'}
+ if(ls){ls.append(c)}});
+document.querySelectorAll('.byday').forEach(box=>{let last='';[...box.children].forEach(c=>{const w=c.querySelector('[data-ts]');if(!w)return;
+ const k=new Date(+w.dataset.ts*1000).toDateString();if(k!==last){last=k;const h=document.createElement('h3');h.className='day';
+ h.textContent=new Intl.DateTimeFormat([], {weekday:'long',month:'long',day:'numeric'}).format(new Date(+w.dataset.ts*1000));box.insertBefore(h,c)}})});
 const tz=document.getElementById('tzname');if(tz)tz.textContent=Intl.DateTimeFormat().resolvedOptions().timeZone||'local time';
 document.addEventListener('click',ev=>{const b=ev.target.closest('.reveal');if(b){const r=document.getElementById(b.dataset.for);
- if(!r.hidden){r.hidden=true;b.textContent='Reveal result';b.setAttribute('aria-expanded','false')}else if(confirm('Show the result? This is a spoiler.')){r.hidden=false;b.textContent='Hide result';b.setAttribute('aria-expanded','true')}return}
+ if(!r.hidden){r.hidden=true;b.textContent='Reveal replays';b.setAttribute('aria-expanded','false')}else if(confirm('Show replay links? The number of links shows how many games were played.')){r.hidden=false;b.textContent='Hide replays';b.setAttribute('aria-expanded','true')}return}
  const w=ev.target.closest('[data-warn]');if(w&&!confirm('Heads up: '+w.dataset.warn+' search results and thumbnails often show the score or winner. Open anyway?'))ev.preventDefault();
  const c=ev.target.closest('.copy');if(c&&navigator.clipboard){navigator.clipboard.writeText(c.dataset.copy);c.textContent='copied'}});
 const FK='nsd-follow';let fol=new Set();try{fol=new Set(JSON.parse(localStorage.getItem(FK)||'[]'))}catch(_){}
@@ -162,7 +174,7 @@ const sv=saved&&F.querySelector(`input[value="${saved}"]`);if(sv)sv.checked=true
 function apply(){const tv=F.querySelector('input[name=tier]:checked').value,max=tv==='all'?9:+tv,s=q.value.trim().toLowerCase();try{localStorage.setItem('nsd-tier',tv)}catch(_){}
  try{localStorage.setItem('nsd-mine',mine.checked?'1':'0');localStorage.setItem('nsd-ffirst',ff.checked?'1':'0')}catch(_){}order();
  items.forEach(el=>{const ok=(mine.checked?el.classList.contains('fav'):+el.dataset.tier<=max)&&(!s||el.dataset.search.includes(s));el.classList.toggle('hide',!ok)});
- document.querySelectorAll('.grp').forEach(g=>g.classList.toggle('hide',!g.querySelector('[data-tier]:not(.hide)')));
+ document.querySelectorAll('.grp').forEach(g=>g.classList.toggle('hide',!g.querySelector('[data-tier]:not(.hide)')));document.querySelectorAll('h3.day').forEach(h=>{let n=h.nextElementSibling,v=false;while(n&&!n.matches('h3.day')){if(!n.classList.contains('hide'))v=true;n=n.nextElementSibling}h.classList.toggle('hide',!v)});
  document.querySelectorAll('.sect').forEach(sc=>{const any=sc.querySelector('[data-tier]:not(.hide)'),em=sc.querySelector('.empty');if(em)em.style.display=any?'none':'block'})}
 F.addEventListener('change',apply);document.addEventListener('nsd-follow',()=>{if(mine.checked||ff.checked)apply()});q.addEventListener('input',apply);apply()})();"""
 BD="nospoildota"
@@ -171,28 +183,22 @@ def signup(compact=True):
     if compact: return f"<details class=signup><summary>Optional: a weekly spoiler-free “what to watch” email</summary>{f}</details>"
     return f
 NAV=[("index.html","Matches"),("tournaments.html","Tournaments"),("teams.html","Teams"),("about.html","About")]
-def page(title,body,depth=0,cur=None):
-    p="../"*depth
+def page(title,body,depth=0,cur=None,path="",desc=None,ld=None):
+    p="../"*depth; PAGES.append(path); can=SITE+path
+    desc=desc or "Spoiler-free Dota 2 pro match calendar and replay finder: schedules, live badges and official streams with no scores."
+    ldj=f'<script type="application/ld+json">{json.dumps(ld,ensure_ascii=False).replace("</","<\\/")}</script>' if ld else ""
     nav="".join(f"<a href='{p}{h}'{' aria-current=page' if h==cur else ''}>{t}</a>" for h,t in NAV)
-    return f"""<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{e(title)} · NoSpoilDota</title>
-<meta name=description content="Spoiler-free Dota 2 pro match calendar and replay finder."><meta name=color-scheme content=dark><link rel=stylesheet href="{p}style.css"></head><body>
+    return f"""<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{e(title)}</title>
+<meta name=description content="{e(desc)}"><link rel=canonical href="{can}"><meta property=og:type content=website><meta property=og:site_name content=NoSpoilDota><meta property=og:title content="{e(title)}"><meta property=og:description content="{e(desc)}"><meta property=og:url content="{can}"><meta name=twitter:card content=summary><meta name=color-scheme content=dark>{ldj}<link rel=stylesheet href="{p}style.css"></head><body>
 <a class=skip href="#main">Skip to content</a><header><a class=logo href="{p}index.html">NoSpoil<span>Dota</span></a><nav aria-label=Main>{nav}</nav></header>
 <main id=main>{body}</main><footer>Match data: <a href="https://www.opendota.com">OpenDota</a> · Schedule, tiers &amp; streams: <a href="https://liquipedia.net/dota2/">Liquipedia</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA 3.0</a>) · Not affiliated with Valve · Times in your timezone (<span id=tzname>local</span>) · <a href="{p}newsletter.html">Newsletter</a></footer><script src="{p}app.js" defer></script></body></html>"""
 
+PAGES=[]
 def stream_url(pl,ch): return f"https://liquipedia.net/dota2/Special:Stream/{pl}/{urllib.parse.quote(ch)}"
-def watch_links(s):
-    a,b=s['teams']; tn=s['tname']; st=s.get('streams',[]); out=[]
-    for pl,ch in st[:2]:
-        if pl=='twitch':
-            out.append(f"<a class=btn href='https://www.twitch.tv/{urllib.parse.quote(ch.replace(' ','_').lower())}/videos?filter=archives&amp;sort=time' target=_blank rel=noopener title='Official broadcaster: past broadcasts ({e(ch)})'>▶ Official VODs (Twitch)</a>")
-        else:
-            lab={'kick':'Kick','youtube':'YouTube'}.get(pl,pl.title())
-            out.append(f"<a class=btn href='{stream_url(pl,ch)}' target=_blank rel=noopener title='Official channel ({e(ch)}) via Liquipedia'>▶ Official {lab} channel</a>")
-    q=urllib.parse.quote_plus(f"{tn} {a} vs {b}")
-    out.append(f"<a class='btn ghost' href='https://www.youtube.com/results?search_query={q}' target=_blank rel=noopener data-warn=YouTube>YouTube search ⚠</a>")
-    if not any(pl=='twitch' for pl,_ in st):
-        out.append(f"<a class='btn ghost' href='https://www.twitch.tv/search?term={urllib.parse.quote(tn)}&amp;type=videos' target=_blank rel=noopener data-warn=Twitch>Twitch search ⚠</a>")
-    return "".join(out)
+PL={'twitch':'Twitch','youtube':'YouTube','kick':'Kick'}
+def watch_links(s,cls="btn",n=2,live=False):
+    """Official channels from Liquipedia's stream data only (no search pages, no titles/thumbnails that could spoil)."""
+    return "".join(f"<a class='{cls}' href='{stream_url(pl,ch)}' target=_blank rel='noopener nofollow' title='Official {PL.get(pl,pl.title())} channel: {e(ch)} (via Liquipedia)'>▶ {'Watch' if live else 'Official stream'} · {PL.get(pl,pl.title())}</a>" for pl,ch in s.get('streams',[])[:n])
 def star(k,n,big=False):
     lab=f"Follow {e(n)}"
     return f"<button type=button class='star{' big' if big else ''}' data-follow={k} aria-pressed=false aria-label='{lab}' title='{lab}'><span aria-hidden=true>☆</span>{'<span class=lbl>Follow</span>' if big else ''}</button>"
@@ -201,17 +207,16 @@ def card(s,d,ctx,TEAMS):
     live=s.get('live'); kind='live' if live else ('up' if ctx=='up' else 'done')
     tn=lambda x: e(x) if team_key(x) not in TEAMS else star(team_key(x),TEAMS[team_key(x)])+f"<a href='{'../'*d}team/{slug(TEAMS[team_key(x)])}.html'>{e(x)}</a>"
     tier=f"<span class=tier title='Liquipedia tier {s['tier']}'>T{s['tier']}</span>" if s.get('tier') else ""
-    head=(f"<div class=when data-ts={s['start']} data-kind={kind}></div><div><div class=teams>{tn(a)}<span class=vs>vs</span>{tn(b)}"
-          f"{'<span class=badge>LIVE</span>' if live else ''}</div><div class=tag><a href='{'../'*d}t/{slug(s['tname'])}.html'>{e(s['tname'])}</a> · Bo{s['bo']}{tier}</div></div>")
-    attrs=f"class='m{' is-live' if live else ''}' data-tier={s.get('tier') or 9} data-teams=\"{' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e(f'{a} {b} {s[chr(116)+"name"]}'.lower())}\""
+    head=(f"<div class=when data-ts={s['start']} data-kind={'up' if ctx=='up' else 'done'}></div><div><div class=teams>{tn(a)}<span class=vs>vs</span>{tn(b)}"
+          f"</div><div class=tag><a href='{'../'*d}t/{slug(s['tname'])}.html'>{e(s['tname'])}</a> · Bo{s['bo']}{tier}</div></div>")
+    attrs=f"class=m{' data-bo='+str(s['bo'])+(' data-live=1' if live else '') if ctx=='up' else ''} data-tier={s.get('tier') or 9} data-teams=\"{' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e(f'{a} {b} {s[chr(116)+"name"]}'.lower())}\""
     if ctx=='up':
-        acts=""
-        if s.get('streams'): acts=f"<a class='btn{'' if live else ' ghost'}' href='{stream_url(*s['streams'][0])}' target=_blank rel=noopener>{'▶ Watch live' if live else 'Stream'}</a>"
+        acts=watch_links(s,"btn ghost strm",1)
         return f"<div {attrs}>{head}<div class=acts>{acts}</div></div>"
-    maps="<br>".join(f"Game {i+1}: <b>{e(m['win'])}</b> won ({m['score']} kills, {m['dur']}) · match ID <code>{m['id']}</code> <button class='btn ghost mini copy' data-copy={m['id']}>copy</button> · <a href='https://www.opendota.com/matches/{m['id']}'>OpenDota</a> · <a href='https://www.dotabuff.com/matches/{m['id']}'>Dotabuff</a>"
+    maps="<br>".join(f"<span class=rp>Replay {i+1}: match ID <code>{m['id']}</code> <button class='btn ghost mini copy' data-copy={m['id']}>copy</button></span>"
                   for i,m in enumerate(sorted(s['maps'],key=lambda m:m['t'])))
-    maps+="<br><span class=tag>In-game replay (DotaTV): Dota 2 → Watch → Replays → search the match ID (replays are kept for about two weeks).</span>"
-    return (f"<div {attrs}>{head}<div class=acts>{watch_links(s)}<button class='btn reveal' data-for={uid} aria-expanded=false aria-controls={uid}>Reveal result</button></div>"
+    maps+="<br><span class=tag>Watch in the Dota 2 client: Watch → Replays → search the match ID (kept about two weeks). Stats sites such as OpenDota show the result.</span>"
+    return (f"<div {attrs}>{head}<div class=acts>{watch_links(s)}<button class='btn reveal' data-for={uid} aria-expanded=false aria-controls={uid}>Reveal replays</button></div>"
             f"<div class=res id={uid} hidden>{maps}</div></div>")
 def tbd_block(items):
     if not items: return ""
@@ -230,6 +235,19 @@ def ics(name,items,url):
     L.append("END:VCALENDAR")
     return "\r\n".join(x if len(x)<=74 else "\r\n ".join(x[i:i+70] for i in range(0,len(x),70)) for x in L)+"\r\n"
 
+def iso(ts): return dt.datetime.fromtimestamp(ts,dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+def events_ld(items,url,limit=50):
+    """schema.org SportsEvent list. Teams, time, tournament only - never winners, scores or game counts."""
+    ev=[]
+    for s in sorted(items,key=lambda x:x['start'])[:limit]:
+        if s['pair']=={'tbd'}: continue
+        ev.append({"@type":"SportsEvent","name":f"{s['teams'][0]} vs {s['teams'][1]} (Bo{s['bo']}) – {s['tname']}","sport":"Dota 2",
+            "startDate":iso(s['start']),"eventAttendanceMode":"https://schema.org/OnlineEventAttendanceMode",
+            "location":{"@type":"VirtualLocation","url":url},"url":url,"organizer":{"@type":"Organization","name":s['tname']},
+            "competitor":[{"@type":"SportsTeam","name":t} for t in s['teams'] if t!='TBD'],
+            "superEvent":{"@type":"SportsEvent","name":s['tname'],"url":f"{SITE}t/{slug(s['tname'])}.html"}})
+        if s['start']>time.time(): ev[-1]["eventStatus"]="https://schema.org/EventScheduled"
+    return {"@context":"https://schema.org","@graph":ev} if ev else None
 def build():
     raw,recent=fetch_recent(); up=fetch_upcoming(); now=time.time()
     TN,TT,TS,TL={},{},defaultdict(set),{}
@@ -254,11 +272,11 @@ def build():
                 s['live']=True; used.add(i)
     recent=[r for i,r in enumerate(recent) if i not in used]
     TEAMS={k:v for k,v in TEAMN.items() if k!='tbd'}
-    upcoming=[s for s in up if s['start']<now+7*86400]; live=[s for s in upcoming if s['live']]; soon=[s for s in upcoming if not s['live']]
+    upcoming=[s for s in up if s['start']<now+7*86400]; live=[s for s in upcoming if s['live']]; soon=upcoming
     def section(items,ctx,d=0,by_t=True,limit=None):
         items=sorted(items,key=lambda x:x['start'],reverse=(ctx=='done'))[:limit]
         if not by_t:
-            return "".join(card(s,d,ctx,TEAMS) for s in items if s['pair']!={'tbd'})+tbd_block([s for s in items if s['pair']=={'tbd'}])
+            return "<div class=byday>"+"".join(card(s,d,ctx,TEAMS) for s in items if s['pair']!={'tbd'})+"</div>"+tbd_block([s for s in items if s['pair']=={'tbd'}])
         g=defaultdict(list)
         for s in items: g[s['tk']].append(s)
         out=""
@@ -273,11 +291,12 @@ def build():
     filt=(f"<form id=filters class=filters role=search onsubmit='return false'><fieldset><legend>Tier</legend>{radio(1,'Tier 1',False)}{radio(2,'Tier 1–2',has_top)}{radio(3,'Tier 1–3',False)}{radio('all','All',not has_top)}</fieldset><fieldset><legend>Followed teams</legend><label class=pill><input type=checkbox id=mine><span>★ My teams</span></label><label class=pill><input type=checkbox id=ffirst><span>Followed first</span></label></fieldset>"
           "<label for=q class=sr>Filter by team or tournament</label><input id=q type=search placeholder='Search team or tournament…' autocomplete=off></form>"
           "<p class=tag>Tap ☆ next to a team to follow it (saved on this device only). Tiers from Liquipedia. Leagues it doesn’t list only appear under “All”.</p>")
-    body=("<p class=note><b>Spoiler-free:</b> no winners, scores or game lengths. Results stay hidden until you press <b>Reveal result</b>.</p>"+filt
-          +sect("Live now",section(live,'up'),"Nothing live right now for this filter.","h-live")
+    body=("<h1 class=sr>Spoiler-free Dota 2 pro match schedule</h1><section class=sect id=ls aria-labelledby=h-live><h2 id=h-live>Live &amp; starting soon</h2><div id=ls-list></div><p class=empty>Nothing live or starting within the hour for this filter.</p></section>"
+          +"<p class=note><b>Spoiler-free:</b> no winners, scores or game counts, only the best-of. Replay links stay hidden until you press <b>Reveal replays</b>.</p>"+filt
           +sect("Upcoming · next 7 days",section(soon,'up'),"No upcoming matches for this filter.","h-up")
           +sect("Recently finished",section(recent,'done',limit=80),"No finished series for this filter. Try “All”.","h-done")+signup())
-    open(f"{OUT}/index.html","w").write(page("Matches",body,0,"index.html"))
+    open(f"{OUT}/index.html","w").write(page("Dota 2 pro match schedule – spoiler-free | NoSpoilDota",body,0,"index.html",path="",
+        desc="Spoiler-free Dota 2 pro match calendar: live and upcoming series, official streams and replay IDs, with no scores or winners.",ld=events_ld(upcoming,SITE,30)))
     for d_ in ("t","team","cal/t","cal/team"): os.makedirs(f"{OUT}/{d_}",exist_ok=True)
     tours=defaultdict(lambda:{"up":[],"done":[]})
     for s in up: tours[s['tk']]["up"].append(s)
@@ -285,15 +304,16 @@ def build():
     for k,v in tours.items():
         n=TN[k]; sl=slug(n); url=f"{SITE}t/{sl}.html"
         lp=f"https://liquipedia.net/dota2/{TL[k]}" if k in TL else f"https://liquipedia.net/dota2/index.php?search={urllib.parse.quote_plus(n)}"
-        strm=" · ".join(f"<a href='{stream_url(pl,ch)}' target=_blank rel=noopener>{e(ch)} ({pl})</a>" for pl,ch in sorted(TS.get(k,()))) or "not listed"
-        b=(f"<h1>{e(n)}{f' <span class=tier>Tier {TT[k]}</span>' if TT.get(k) else ''}</h1><p class=tag>Official streams: {strm}<br>"
-           f"<a href='../cal/t/{sl}.ics'>📅 Add this tournament to your calendar (.ics)</a> · <a href='{lp}' rel=noopener>Liquipedia page</a> (shows results)</p>"
+        strm=watch_links({"streams":sorted(TS.get(k,()))},"btn",6) or "<span class=tag>Official streams not listed by Liquipedia yet.</span>"
+        b=(f"<h1>{e(n)}{f' <span class=tier>Tier {TT[k]}</span>' if TT.get(k) else ''}</h1><div class=watch>{strm}</div>"
+           f"<p class=tag><a href='../cal/t/{sl}.ics'>📅 Add to calendar (.ics)</a> · <a href='{lp}' rel=noopener>Liquipedia</a> (shows results) · times in your timezone</p>"
            +sect("Live &amp; upcoming",section(v['up'],'up',1,False),"None scheduled.","h-up")+sect("Finished",section(v['done'],'done',1,False),"None yet.","h-done"))
-        open(f"{OUT}/t/{sl}.html","w").write(page(n,b,1))
+        open(f"{OUT}/t/{sl}.html","w").write(page(f"{n} schedule – spoiler-free | NoSpoilDota",b,1,path=f"t/{sl}.html",
+            desc=f"{n} Dota 2 schedule by day with official streams and replay IDs. Spoiler-free: no scores, winners or game counts.",ld=events_ld(v['up']+v['done'],url)))
         open(f"{OUT}/cal/t/{sl}.ics","w",newline="").write(ics(n,[s for s in v['up']+v['done'] if s['pair']!={'tbd'}],url))
     act=lambda v:max(x['start'] for x in v['up']+v['done'])
     lst="".join(f"<div class=m><div class=tag>{len(v['up'])} upcoming · {len(v['done'])} finished</div><div class=teams><a href='t/{slug(TN[k])}.html'>{e(TN[k])}</a>{f'<span class=tier>T{TT[k]}</span>' if TT.get(k) else ''}</div><div class=acts><a class='btn ghost' href='cal/t/{slug(TN[k])}.ics'>📅 .ics</a></div></div>" for k,v in sorted(tours.items(),key=lambda kv:-act(kv[1])))
-    open(f"{OUT}/tournaments.html","w").write(page("Tournaments","<h1>Tournaments</h1>"+lst,0,"tournaments.html"))
+    open(f"{OUT}/tournaments.html","w").write(page("Dota 2 tournaments – spoiler-free schedules | NoSpoilDota","<h1>Tournaments</h1>"+lst,0,"tournaments.html",path="tournaments.html",desc="Current Dota 2 pro tournaments with spoiler-free schedules and calendar feeds."))
     tm=defaultdict(lambda:{"up":[],"done":[]})
     for s in up:
         for t in s['pair']-{'tbd'}: tm[t]["up"].append(s)
@@ -304,25 +324,30 @@ def build():
         b=(f"<h1>{e(n)} {star(k,n,True)}</h1><p class=tag><a href='../cal/team/{sl}.ics'>📅 Add {e(n)}’s matches to your calendar (.ics)</a> · spoiler-free: no results or standings.</p>"
            +sect("Live &amp; upcoming",section(v['up'],'up',1,False),"Nothing on Liquipedia’s ticker right now.","h-up")
            +sect("Recent series",section(v['done'],'done',1,False),"No recent series in OpenDota’s feed.","h-done"))
-        open(f"{OUT}/team/{sl}.html","w").write(page(n,b,1))
+        open(f"{OUT}/team/{sl}.html","w").write(page(f"{n} Dota 2 schedule – spoiler-free | NoSpoilDota",b,1,path=f"team/{sl}.html",
+            desc=f"Upcoming and recent {n} Dota 2 matches with official streams and a calendar feed. Spoiler-free: no results.",ld=events_ld(v['up']+v['done'],url)))
         open(f"{OUT}/cal/team/{sl}.ics","w",newline="").write(ics(n,v['up']+v['done'],url))
     tl="".join(f"<li data-teams={k}>{star(k,TEAMS[k])}<a href='team/{slug(TEAMS[k])}.html'>{e(TEAMS[k])}</a> <span class=tag>{len(tm[k]['up'])} upcoming · {len(tm[k]['done'])} recent</span></li>" for k in sorted(tm,key=lambda k:TEAMS[k].lower()))
-    open(f"{OUT}/teams.html","w").write(page("Teams","<h1>Teams</h1><p class=tag>Every team page has a spoiler-free schedule and a calendar feed.</p><ul class=teamlist>"+tl+"</ul>",0,"teams.html"))
+    open(f"{OUT}/teams.html","w").write(page("Dota 2 pro teams – spoiler-free schedules | NoSpoilDota","<h1>Teams</h1><p class=tag>Every team page has a spoiler-free schedule and a calendar feed.</p><ul class=teamlist>"+tl+"</ul>",0,"teams.html",path="teams.html",desc="Follow Dota 2 pro teams: spoiler-free match schedules and calendar feeds for every team."))
     keep={"t":{slug(TN[k]) for k in tours},"team":{slug(TEAMS[k]) for k in tm}}
     for d_ in ("t","team","cal/t","cal/team"):  # prune stale pages from earlier local builds
         for x in os.listdir(f"{OUT}/{d_}"):
             if x.rsplit('.',1)[0] not in keep[d_.split('/')[-1]]: os.remove(f"{OUT}/{d_}/{x}")
-    open(f"{OUT}/about.html","w").write(page("About",f"""<h1>About NoSpoilDota</h1><p>A spoiler-free calendar of professional Dota 2 matches. Find the VOD without seeing who won first.</p>
-<h2>How it stays spoiler-free</h2><ul><li>Lists show only teams, tournament, start time and best-of. Winners, scores, kills and game lengths stay hidden until you press <b>Reveal result</b> and confirm.</li>
-<li>Watch links point at the tournament’s official channel (Twitch past broadcasts where known). Search links are marked ⚠ and ask first, because thumbnails and titles there often spoil.</li>
-<li>A series being played right now appears once, under <b>Live now</b>, and moves to <b>Recently finished</b> afterwards.</li></ul>
+    open(f"{OUT}/about.html","w").write(page("About NoSpoilDota – spoiler-free Dota 2 calendar",f"""<h1>About NoSpoilDota</h1><p>A spoiler-free calendar of professional Dota 2 matches. Find the VOD without seeing who won first.</p>
+<h2>How it stays spoiler-free</h2><ul><li>Lists show only teams, tournament, start time and best-of. Winners, scores and the number of games played are never shown; each series shows only its best-of. Replay match IDs stay behind <b>Reveal replays</b>.</li>
+<li>Watch links go only to official Twitch/YouTube/Kick channels listed by Liquipedia. No search pages, whose titles and thumbnails spoil.</li>
+<li>A series being played right now gets a LIVE badge and appears under <b>Live &amp; starting soon</b>, then moves to <b>Recently finished</b> afterwards.</li></ul>
 <h2>Data &amp; attribution</h2><ul><li>Finished matches: <a href="https://www.opendota.com">OpenDota</a> public API (<code>/api/proMatches</code>).</li>
 <li>Upcoming schedule, tiers and stream channels: <a href="https://liquipedia.net/dota2/Liquipedia:Matches">Liquipedia Dota 2</a>, licensed <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA 3.0</a>. One API request per build (at most hourly) with an identifying User-Agent, per Liquipedia’s API terms.</li>
 <li>Calendar (.ics) feeds are on every tournament and team page.</li></ul><p>Dota 2 is a trademark of Valve Corporation. Not affiliated with Valve, OpenDota or Liquipedia.</p>
-<p class=tag>Last built: {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC</p>""",0,"about.html"))
-    open(f"{OUT}/newsletter.html","w").write(page("Newsletter","""<h1>What to watch: weekly spoiler-free email</h1><p>A free weekly email with the Dota 2 series worth watching and where to find the VODs. No winners, no scores, no spoilers, ever.</p>
-"""+signup(False)+"<p class=tag>Free, one email a week, unsubscribe anytime. Powered by <a href='https://buttondown.com'>Buttondown</a>.</p>"))
+<p class=tag>Last built: {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC</p>""",0,"about.html",path="about.html",desc="How NoSpoilDota keeps Dota 2 schedules spoiler-free, and where the data comes from (OpenDota, Liquipedia CC-BY-SA)."))
+    open(f"{OUT}/newsletter.html","w").write(page("Spoiler-free Dota 2 newsletter | NoSpoilDota","""<h1>What to watch: weekly spoiler-free email</h1><p>A free weekly email with the Dota 2 series worth watching and where to find the VODs. No winners, no scores, no spoilers, ever.</p>
+"""+signup(False)+"<p class=tag>Free, one email a week, unsubscribe anytime. Powered by <a href='https://buttondown.com'>Buttondown</a>.</p>",path="newsletter.html",desc="A free weekly spoiler-free email of Dota 2 series worth watching."))
     open(f"{OUT}/style.css","w").write(CSS); open(f"{OUT}/app.js","w").write(JS)
+    lm=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d')
+    open(f"{OUT}/sitemap.xml","w").write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        +"".join(f"<url><loc>{e(SITE+p)}</loc><lastmod>{lm}</lastmod></url>" for p in PAGES)+"</urlset>\n")
+    open(f"{OUT}/robots.txt","w").write(f"User-agent: *\nAllow: /\nSitemap: {SITE}sitemap.xml\n")
     open(f"{OUT}/CNAME","w").write("nospoildota.com\n")
     stats={"opendota_maps":len(raw),"opendota_series":len(recent),"liquipedia_upcoming":len(up),"live":len(live),"upcoming_7d":len(soon),
            "merged_live":len(used),"tournaments":len(tours),"teams":len(tm),"tiers":{t:sum(1 for s in up if s['tier']==t) for t in (1,2,3,4)}}
