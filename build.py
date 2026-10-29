@@ -575,7 +575,7 @@ def build():
             if lg=='en': open(f"{OUT}/cal/team/{sl}.ics","w",newline="").write(ics(n,v['up']+v['done'],url))  # hidden later-round matches are not in v['up']
         tl="".join(f"<li data-teams={k}>{star(k,TEAMS[k])}<a href='team/{slug(TEAMS[k])}.html'>{e(TEAMS[k])}</a> <span class=tag>{L['teams_counts'].format(u=len(tm[k]['up']),d=len(tm[k]['done']))}</span></li>" for k in sorted(tm,key=lambda k:TEAMS[k].lower()))
         W("teams.html",page(L['teams_title'],f"<h1>{L['teams']}</h1><p class=tag>{L['teams_intro']}</p><ul class=teamlist>"+tl+"</ul>",0,"teams.html",path="teams.html",desc=L['teams_desc']))
-        W("about.html",page(L['about_title'],L['about_body'].replace('{built}',f"{dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M}"),0,"about.html",path="about.html",desc=L['about_desc']))
+        W("about.html",page(L['about_title'],L['about_body'].replace('{built}',f"{dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M}")+signup(),0,"about.html",path="about.html",desc=L['about_desc']))
         if lg=='en': W("404.html",page({'en':'Page not found | NoSpoilDota','es':'Página no encontrada | NoSpoilDota','pt':'Página não encontrada | NoSpoilDota'}[lg],
             {'en':"<h1>Page not found</h1><p><a href='/'>Go to the spoiler-free schedule →</a></p>",'es':"<h1>Página no encontrada</h1><p><a href='/es/'>Ir al calendario sin spoilers →</a></p>",'pt':"<h1>Página não encontrada</h1><p><a href='/pt/'>Ir para a agenda sem spoilers →</a></p>"}[lg],path="",nolist=True))
         W("newsletter.html",page(L['nl_title'],L['nl_body']+signup(False)+f"<p class=tag>{L['nl_foot']}</p>",path="newsletter.html",desc=L['nl_desc']))
