@@ -320,12 +320,12 @@ def page(title,body,depth=0,cur=None,path="",desc=None,ld=None,nolist=False):
     NAV=[("index.html",L['matches']),("tournaments.html",L['tournaments']),("teams.html",L['teams']),("about.html",L['about'])]
     nav="".join(f"<a href='{p}{h}'{' aria-current=page' if h==cur else ''}>{t}</a>" for h,t in NAV)
     sw="<span class=lang>"+" | ".join(f"<a href='/{PFX[x]}{path}' hreflang={HLANG[x]} lang={HLANG[x]} data-lg={x}{' aria-current=true' if LG==x else ''}>{x.upper()}</a>" for x in LANGS)+"</span>"
-    hint="".join(f"<p id={x}hint class=note lang={HLANG[x]} hidden>{HINTS[x].format(u='/'+PFX[x]+path)}</p>" for x in ('es','pt') if x!=LG and not (x=='es' and LG!='en'))
+    hint="".join(f"<p id={x}hint class=note lang={HLANG[x]} hidden>{HINTS[x].format(u='/'+PFX[x]+path).replace('<a ',f'<a data-lg={x} ')}</p>" for x in ('es','pt') if x!=LG and not (x=='es' and LG!='en'))
     alt="".join(f'<link rel=alternate hreflang={HLANG[x]} href="{SITE+PFX[x]+path}">' for x in LANGS)+f'<link rel=alternate hreflang=x-default href="{SITE+path}">'
-    return f"""<!doctype html><html lang={HLANG[LG]}><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{e(title)}</title>{LANG_JS.replace("@L",LG)}
+    return f"""<!doctype html><html lang={HLANG[LG]}><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{e(title)}</title>{LANG_JS.replace("@L",'404' if nolist else LG)}
 <meta name=description content="{e(desc)}"><link rel=canonical href="{can}">{alt}<meta property=og:type content=website><meta property=og:site_name content=NoSpoilDota><meta property=og:locale content={L['locale']}><meta property=og:title content="{e(title)}"><meta property=og:description content="{e(desc)}"><meta property=og:url content="{can}"><meta name=twitter:card content=summary><meta name=color-scheme content=dark>{ldj}<link rel=stylesheet href="{r}style.css?v={ASSET_V}"></head><body>
 <a class=skip href="#main">{L['skip']}</a><header><a class=logo href="{p}index.html">NoSpoil<span>Dota</span></a>{sw}<nav aria-label={L['main_nav']}>{nav}</nav></header>
-<main id=main>{hint}{body}</main><footer>{L['foot'].format(p=p)}</footer><script src="{r}app.js?v={ASSET_V}" defer></script><script data-goatcounter="https://nospoildota.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></body></html>"""
+<main id=main>{hint}{body}</main><footer>{L['foot'].format(p=p)}</footer><script src="{r}app.js?v={ASSET_V}" defer></script><script data-goatcounter="https://nospoildota.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script></body></html>"""
 PAGES=[]
 HANDLE={'twitch':r'[A-Za-z0-9_]{3,25}','kick':r'[A-Za-z0-9_-]{3,40}','youtube':r'@?[A-Za-z0-9_.-]{3,40}|channel/UC[A-Za-z0-9_-]{22}'}
 def stream_url(pl,ch):
@@ -403,7 +403,7 @@ def star(k,n,big=False):
     return f"<button type=button class='star{' big' if big else ''}' data-follow={k} data-n=\"{e(n)}\" aria-pressed=false aria-label='{lab}' title='{lab}'><span aria-hidden=true>☆</span>{'<span class=lbl>'+L['follow']+'</span>' if big else ''}</button>"
 LANG_JS="""<script>(function(){var C='@L',K='nsd-lang',P={en:'/',es:'/es/',pt:'/pt/'},s=null;try{s=localStorage.getItem(K)}catch(e){}
 document.addEventListener('click',function(v){var a=v.target.closest&&v.target.closest('a[data-lg]');if(a)try{localStorage.setItem(K,a.dataset.lg)}catch(e){}});
-if(navigator.webdriver||/bot|crawl|spider/i.test(navigator.userAgent)||/[?&]lang=en(&|$)/.test(location.search))return;
+if(C==='404'||navigator.webdriver||/bot|crawl|spider/i.test(navigator.userAgent)||/[?&]lang=en(&|$)/.test(location.search))return;
 var t=null;if(s&&P[s])t=s;else if(C==='en'&&!(document.referrer&&new URL(document.referrer).host===location.host)){var l=(navigator.languages||[navigator.language||'']);for(var i=0;i<l.length;i++){var x=(l[i]||'').toLowerCase();if(x.indexOf('es')===0){t='es';break}if(x.indexOf('pt')===0){t='pt';break}if(x.indexOf('en')===0)break}}
 if(!t||t===C)return;var r=location.pathname.replace(/^\\/(es|pt)\\//,'/');location.replace(P[t]+r.slice(1)+location.search+location.hash)})()</script>"""
 def card(s,d,ctx,TEAMS):
@@ -436,7 +436,13 @@ def ics(name,items,url):
             "SUMMARY:"+esc(f"{s['teams'][0]} vs {s['teams'][1]} (Bo{s['bo']}) · {s['tname']}"),
             "DESCRIPTION:"+esc("Spoiler-free, no results. Watch links: "+url),f"URL:{url}","END:VEVENT"]
     L.append("END:VCALENDAR")
-    return "\r\n".join(x if len(x)<=74 else "\r\n ".join(x[i:i+70] for i in range(0,len(x),70)) for x in L)+"\r\n"
+    def fold(x):  # RFC 5545: max 75 octets per line, never split a UTF-8 character
+        out=[];cur=''
+        for ch in x:
+            if len((cur+ch).encode())>(75 if not out else 74): out.append(cur);cur=''
+            cur+=ch
+        return "\r\n ".join(out+[cur])
+    return "\r\n".join(fold(x) for x in L)+"\r\n"
 
 def iso(ts): return dt.datetime.fromtimestamp(ts,dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 def events_ld(items,url,limit=50):
