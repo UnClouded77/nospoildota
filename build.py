@@ -110,7 +110,7 @@ h3{font-size:13px;margin:1.1em 0 .3em;color:var(--mut);text-transform:uppercase;
 .tier{font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:0 4px;margin-left:6px;color:var(--mut);vertical-align:1px;letter-spacing:0}
 .m{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:9px 12px;margin:6px 0;display:grid;grid-template-columns:150px 1fr auto;gap:4px 12px;align-items:center}
 .m.is-live{border-color:#8a2b2b;background:#1e1618}
-.when{font-size:13px;color:var(--mut)}.when .rel{display:block;color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}.when.near .rel{color:#ffb199}.m.tl{display:block;position:relative}.m.tl:hover{border-color:#3a414f}.tla::after{content:'';position:absolute;inset:0;border-radius:10px}.cals{white-space:nowrap;position:relative;z-index:1}.tlh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px}a.cal,a.calf{color:var(--mut);font-size:12.5px;position:relative;z-index:1;white-space:nowrap}a.calf{margin-left:6px;font-size:11.5px;opacity:.8}a.cal:hover,a.calf:hover{color:var(--fg)}.wres.shown{gap:5px;border-color:#3a414f;cursor:default;white-space:nowrap}.wres .wn{color:#7dd3a0}.wres .ls{color:#f19a9a}.when .rel.cd::after{content:' ·';color:var(--mut);font-weight:400}
+.when{font-size:13px;color:var(--mut)}.when .rel{display:block;color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}.when.near .rel{color:#ffb199}.orig{color:var(--mut);font-weight:400;font-size:.85em}@media(max-width:640px){.m .teams .orig,.m .tag .orig{display:none}}.m.tl{display:block;position:relative}.m.tl:hover{border-color:#3a414f}.tla::after{content:'';position:absolute;inset:0;border-radius:10px}.cals{white-space:nowrap;position:relative;z-index:1}.tlh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px}a.cal,a.calf{color:var(--mut);font-size:12.5px;position:relative;z-index:1;white-space:nowrap}a.calf{margin-left:6px;font-size:11.5px;opacity:.8}a.cal:hover,a.calf:hover{color:var(--fg)}.wres.shown{gap:5px;border-color:#3a414f;cursor:default;white-space:nowrap}.wres .wn{color:#7dd3a0}.wres .ls{color:#f19a9a}.when .rel.cd::after{content:' ·';color:var(--mut);font-weight:400}
 .teams{font-weight:600}.teams a{color:var(--fg)}.vs{color:var(--mut);font-weight:400;margin:0 6px}
 .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .btn{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid var(--bd);background:#222733;color:var(--fg);cursor:pointer;min-height:32px;display:inline-flex;align-items:center}
@@ -312,6 +312,19 @@ STR={
 LANGS=('en','es','pt'); HLANG={'en':'en','es':'es','pt':'pt-BR'}; PFX={'en':'','es':'es/','pt':'pt/'}
 HINTS={'es':'¿Prefieres español? <a href="{u}">Ver esta página en español →</a>','pt':'Prefere português? <a href="{u}">Ver esta página em português →</a>'}
 LG='en'; L=STR['en']; RP=''; LROOT=SITE
+CJK=re.compile(r'[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff]')
+try: NAMES={k:v for k,v in json.load(open(os.path.join(ROOT,'data','name_translations.json'),encoding='utf-8')).items() if not k.startswith('_')}
+except FileNotFoundError: NAMES={}
+MISSING=set()
+def tr(n):
+    """Display name in the page language for CJK names (data/name_translations.json); others unchanged."""
+    m=NAMES.get(n)
+    if m: return m.get(LG) or m.get('en') or n
+    if n and CJK.search(n): MISSING.add(n)
+    return n
+def hn(n):
+    t=tr(n); return e(t)+(f"<span class=orig lang=zh> · {e(n)}</span>" if t!=n else "")
+def both(n): return (n+' '+tr(n)).lower() if tr(n)!=n else n.lower()
 def set_lang(lg):
     global LG,L,RP,LROOT
     LG=lg; L=STR[lg]; RP='' if lg=='en' else '../'; LROOT=SITE+PFX[lg]
@@ -420,8 +433,8 @@ def watch_links(s,cls="btn",n=2,live=False,all_=False):
         return "".join(f"<a class='{cls}' href='{stream_url(pl,ch)}' target=_blank rel='noopener nofollow' title='{L['ch_title']}: {e(ch)}'>▶ {L['wl'] if live else L['ch']} · {PL.get(pl,pl.title())}</a>" for pl,ch in st)
     return "".join(f"<a class='{cls}' href='{stream_url(pl,ch)}' target=_blank rel='noopener nofollow' title='{L['ch_title']}'>▶ {PL.get(pl,pl.title())} · {e(ch.split('/')[-1].lstrip('@'))}</a>" for pl,ch in st)
 def star(k,n,big=False):
-    lab=f"{L['follow']} {e(n)}"
-    return f"<button type=button class='star{' big' if big else ''}' data-follow={k} data-n=\"{e(n)}\" aria-pressed=false aria-label='{lab}' title='{lab}'><span aria-hidden=true>☆</span>{'<span class=lbl>'+L['follow']+'</span>' if big else ''}</button>"
+    lab=f"{L['follow']} {e(tr(n))}"
+    return f"<button type=button class='star{' big' if big else ''}' data-follow={k} data-n=\"{e(tr(n))}\" aria-pressed=false aria-label='{lab}' title='{lab}'><span aria-hidden=true>☆</span>{'<span class=lbl>'+L['follow']+'</span>' if big else ''}</button>"
 LANG_JS="""<script>(function(){var C='@L',K='nsd-lang',P={en:'/',es:'/es/',pt:'/pt/'},s=null;try{s=localStorage.getItem(K)}catch(e){}
 document.addEventListener('click',function(v){var a=v.target.closest&&v.target.closest('a[data-lg]');if(a)try{localStorage.setItem(K,a.dataset.lg)}catch(e){}});
 if(C==='404'||navigator.webdriver||/bot|crawl|spider/i.test(navigator.userAgent)||/[?&]lang=en(&|$)/.test(location.search))return;
@@ -430,35 +443,35 @@ if(!t||t===C)return;var r=location.pathname.replace(/^\\/(es|pt)\\//,'/');locati
 def card(s,d,ctx,TEAMS):
     a,b=s['teams']; uid="r"+hashlib.md5(f"{s['start']}{a}{b}{s['tname']}".encode()).hexdigest()[:8]
     live=s.get('live')
-    tn=lambda x: e(x) if team_key(x) not in TEAMS else star(team_key(x),TEAMS[team_key(x)])+f"<a href='{'../'*d}team/{slug(TEAMS[team_key(x)])}.html'>{e(x)}</a>"
+    tn=lambda x: hn(x) if team_key(x) not in TEAMS else star(team_key(x),TEAMS[team_key(x)])+f"<a href='{'../'*d}team/{slug(TEAMS[team_key(x)])}.html'>{hn(x)}</a>"
     tier=f"<span class=tier title='{L['tier_title'].format(n=s['tier'])}'>T{s['tier']}</span>" if s.get('tier') else ""
     real=f"{tn(a)}<span class=vs>vs</span>{tn(b)}"; hid=s.get('hid') and ctx=='up'
     b64=lambda x: base64.b64encode(x.encode()).decode()
     lab=e(L['po_r'].format(r=s['rnd']) if s.get('rnd') else L['po'])
-    tt=(f"<span class=tn>TBD<span class=vs>vs</span>TBD <span class=tag>· {lab}</span></span> <button type=button class='btn ghost mini steams' data-h=\"{b64(real)}\" data-k=\"{b64(' '.join(sorted(s['pair']-{'tbd'})))}\" data-q=\"{b64(f'{a} {b}'.lower())}\">{L['showteams']}</button>") if hid else f"<span class=tn>{real}</span>"
+    tt=(f"<span class=tn>TBD<span class=vs>vs</span>TBD <span class=tag>· {lab}</span></span> <button type=button class='btn ghost mini steams' data-h=\"{b64(real)}\" data-k=\"{b64(' '.join(sorted(s['pair']-{'tbd'})))}\" data-q=\"{b64(both(a)+' '+both(b))}\">{L['showteams']}</button>") if hid else f"<span class=tn>{real}</span>"
     head=(f"<div class=when data-ts={s['start']} data-kind={'up' if ctx=='up' else 'done'}>{fdate(s['start'])}</div><div><div class=teams>{tt}"
-          f"</div><div class=tag><a href='{'../'*d}t/{slug(s['tname'])}.html'>{e(s['tname'])}</a> · Bo{s['bo']}{tier}</div></div>")
-    attrs=f"class=m{' data-bo='+str(s['bo'])+(' data-live=1' if live else '') if ctx=='up' else ''} data-tier={s.get('tier') or 9} data-teams=\"{'' if hid else ' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e((s['tname'] if hid else f'{a} {b} '+s['tname']).lower())}\""
+          f"</div><div class=tag><a href='{'../'*d}t/{slug(s['tname'])}.html'>{hn(s['tname'])}</a> · Bo{s['bo']}{tier}</div></div>")
+    attrs=f"class=m{' data-bo='+str(s['bo'])+(' data-live=1' if live else '') if ctx=='up' else ''} data-tier={s.get('tier') or 9} data-teams=\"{'' if hid else ' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e(both(s['tname']) if hid else both(a)+' '+both(b)+' '+both(s['tname']))}\""
     if ctx=='up':
         return f"<div {attrs}>{head}<div class=acts>{watch_links(s,'btn ghost strm',2)}</div></div>"
-    maps="<br>".join(f"<span class=rp>{L['replay'].format(i=i+1)} <code>{m['id']}</code> <button class='btn ghost mini copy' data-copy={m['id']}>{L['copy']}</button> <button type=button class='btn ghost mini wres' data-w=\"{base64.b64encode(TEAMS.get(team_key(m['w']),m['w']).encode()).decode() if m.get('w') else ''}\" data-l=\"{base64.b64encode(next((x for x in (a,b) if team_key(x)!=team_key(m['w'])),'').encode()).decode() if m.get('w') else ''}\" aria-live=polite>{L['showres']}</button></span>"
+    maps="<br>".join(f"<span class=rp>{L['replay'].format(i=i+1)} <code>{m['id']}</code> <button class='btn ghost mini copy' data-copy={m['id']}>{L['copy']}</button> <button type=button class='btn ghost mini wres' data-w=\"{base64.b64encode(tr(TEAMS.get(team_key(m['w']),m['w'])).encode()).decode() if m.get('w') else ''}\" data-l=\"{base64.b64encode(tr(next((x for x in (a,b) if team_key(x)!=team_key(m['w'])),'')).encode()).decode() if m.get('w') else ''}\" aria-live=polite>{L['showres']}</button></span>"
                   for i,m in enumerate(sorted(s['maps'],key=lambda m:m['t'])))
     maps+=f"<br><span class=tag>{L['client']}</span>"
     return (f"<div {attrs}>{head}<div class=acts><button class='btn reveal' data-for={uid} aria-expanded=false aria-controls={uid}>{L['reveal']}</button></div>"
             f"<div class=res id={uid} hidden>{maps}</div></div>")
 def tbd_block(items):
     if not items: return ""
-    li="".join(f"<li><span data-ts={s['start']} data-kind=up>{fdate(s['start'])}</span> · {e(' vs '.join(s['teams']))} · Bo{s['bo']}</li>" for s in sorted(items,key=lambda x:x['start']))
+    li="".join(f"<li><span data-ts={s['start']} data-kind=up>{fdate(s['start'])}</span> · {' vs '.join(hn(t) for t in s['teams'])} · Bo{s['bo']}</li>" for s in sorted(items,key=lambda x:x['start']))
     t=min((s.get('tier') or 9) for s in items); n=len(items)
-    return f"<details class=tbd data-tier={t} data-search=\"{e(items[0]['tname'].lower())} tbd\"><summary>{(L['tbd1'] if n==1 else L['tbdn']).format(n=n)}</summary><ul>{li}</ul></details>"
+    return f"<details class=tbd data-tier={t} data-search=\"{e(both(items[0]['tname']))} tbd\"><summary>{(L['tbd1'] if n==1 else L['tbdn']).format(n=n)}</summary><ul>{li}</ul></details>"
 def ics(name,items,url):
     f=lambda ts: dt.datetime.fromtimestamp(ts,dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     esc=lambda x: re.sub(r'([,;\\])',r'\\\1',x).replace('\n','\\n')
-    stamp=f(time.time()); L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//NoSpoilDota//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",f"X-WR-CALNAME:{esc(name)} (NoSpoilDota)","X-PUBLISHED-TTL:PT2H","REFRESH-INTERVAL;VALUE=DURATION:PT2H"]
+    stamp=f(time.time()); L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//NoSpoilDota//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",f"X-WR-CALNAME:{esc(tr(name))} (NoSpoilDota)","X-PUBLISHED-TTL:PT2H","REFRESH-INTERVAL;VALUE=DURATION:PT2H"]
     for s in sorted(items,key=lambda x:x['start']):
         uid=hashlib.md5((f"{s['tk']}|{s['mid']}" if s.get('mid') else f"{s['start']}|{s['tk']}|{'|'.join(sorted(map(team_key,s['teams'])))}").encode()).hexdigest()
         L+=["BEGIN:VEVENT",f"UID:{uid}@nospoildota",f"DTSTAMP:{stamp}",f"DTSTART:{f(s['start'])}",f"DURATION:PT{max(1,s['bo'])}H",
-            "SUMMARY:"+esc((f"{STR['en']['po_r'].format(r=s['rnd']) if s.get('rnd') else STR['en']['po']} (Bo{s['bo']}) · {s['tname']}") if s.get('hid') and s['start']>time.time()-6*3600 else f"{s['teams'][0]} vs {s['teams'][1]} (Bo{s['bo']}) · {s['tname']}"),
+            "SUMMARY:"+esc((f"{STR['en']['po_r'].format(r=s['rnd']) if s.get('rnd') else STR['en']['po']} (Bo{s['bo']}) · {tr(s['tname'])}") if s.get('hid') and s['start']>time.time()-6*3600 else f"{tr(s['teams'][0])} vs {tr(s['teams'][1])} (Bo{s['bo']}) · {tr(s['tname'])}"),
             "DESCRIPTION:"+esc("Spoiler-free, no results. Watch links: "+url),f"URL:{url}","END:VEVENT"]
     L.append("END:VCALENDAR")
     def fold(x):  # RFC 5545: max 75 octets per line, never split a UTF-8 character
@@ -475,11 +488,11 @@ def events_ld(items,url,limit=50):
     ev=[]
     for s in sorted(items,key=lambda x:x['start'])[:limit]:
         if s['pair']=={'tbd'} or s.get('hid'): continue
-        ev.append({"@type":"SportsEvent","name":f"{s['teams'][0]} vs {s['teams'][1]} (Bo{s['bo']}) – {s['tname']}","sport":"Dota 2",
+        ev.append({"@type":"SportsEvent","name":f"{tr(s['teams'][0])} vs {tr(s['teams'][1])} (Bo{s['bo']}) – {tr(s['tname'])}","sport":"Dota 2",
             "startDate":iso(s['start']),"eventAttendanceMode":"https://schema.org/OnlineEventAttendanceMode",
-            "location":{"@type":"VirtualLocation","url":url},"url":url,"organizer":{"@type":"Organization","name":s['tname']},
-            "competitor":[{"@type":"SportsTeam","name":t} for t in s['teams'] if t!='TBD'],
-            "superEvent":{"@type":"SportsEvent","name":s['tname'],"url":f"{LROOT}t/{slug(s['tname'])}.html"}})
+            "location":{"@type":"VirtualLocation","url":url},"url":url,"organizer":{"@type":"Organization","name":tr(s['tname'])},
+            "competitor":[{"@type":"SportsTeam","name":tr(t)} for t in s['teams'] if t!='TBD'],
+            "superEvent":{"@type":"SportsEvent","name":tr(s['tname']),"url":f"{LROOT}t/{slug(s['tname'])}.html"}})
         if s['start']>time.time(): ev[-1]["eventStatus"]="https://schema.org/EventScheduled"
     return {"@context":"https://schema.org","@graph":ev} if ev else None
 def build():
@@ -541,7 +554,7 @@ def build():
         out=""
         for k in sorted(g,key=lambda k:(min(x['start'] for x in g[k]) if ctx!='done' else -max(x['start'] for x in g[k]))):
             tier=f"<span class=tier>T{TT[k]}</span>" if TT.get(k) else ""
-            out+=(f"<div class=grp><h3><a href='{'../'*d}t/{slug(TN[k])}.html'>{e(TN[k])}</a>{tier}</h3>"
+            out+=(f"<div class=grp><h3><a href='{'../'*d}t/{slug(TN[k])}.html'>{hn(TN[k])}</a>{tier}</h3>"
                   +"".join(card(s,d,ctx,TEAMS) for s in g[k] if s['pair']!={'tbd'})+tbd_block([s for s in g[k] if s['pair']=={'tbd'}])+"</div>")
         return out
     sect=lambda h,inner,empty,idn: f"<section class=sect aria-labelledby={idn}><h2 id={idn}>{h}</h2>{inner}<p class=empty>{empty}</p></section>"
@@ -564,23 +577,23 @@ def build():
             n=TN[k]; sl=slug(n); url=f"{LROOT}t/{sl}.html"
             lp=f"https://liquipedia.net/dota2/{TL[k]}" if k in TL else f"https://liquipedia.net/dota2/index.php?search={urllib.parse.quote_plus(n)}"
             strm=watch_links({"streams":TS.get(k,[])},"btn",99,True,True) or f"<span class=tag>{L['no_stream']}</span>"
-            b=(f"<h1>{e(n)}{' <span class=tier>'+L['tier_h'].format(n=TT[k])+'</span>' if TT.get(k) else ''}</h1><div class=watch>{strm}</div>"
+            b=(f"<h1>{hn(n)}{' <span class=tier>'+L['tier_h'].format(n=TT[k])+'</span>' if TT.get(k) else ''}</h1><div class=watch>{strm}</div>"
                f"<p class=tag>{cal_link(f'cal/t/{sl}.ics')} · <a href='{lp}' rel=noopener>Liquipedia</a> {L['lp_res']}</p>"
                +sect(L['lu'],section(v['up'],'up',1,False),L['none_sched'],"h-up")+sect(L['fin'],section(v['done'],'done',1,False),L['none_yet'],"h-done"))
-            W(f"t/{sl}.html",page(L['t_title'].format(n=n),b,1,path=f"t/{sl}.html",desc=L['t_desc'].format(n=n),ld=events_ld(v['up']+v['done'],url)))
+            W(f"t/{sl}.html",page(L['t_title'].format(n=tr(n)),b,1,path=f"t/{sl}.html",desc=L['t_desc'].format(n=tr(n)),ld=events_ld(v['up']+v['done'],url)))
             if lg=='en': open(f"{OUT}/cal/t/{sl}.ics","w",newline="").write(ics(n,[s for s in v['up']+v['done'] if s['pair']!={'tbd'}],url))
         act=lambda v:max(x['start'] for x in v['up']+v['done'])
-        lst="".join(f"<div class='m tl'><div class=tag>{L['tl_counts'].format(u=len(v['up']),d=len(v['done']))}</div><div class=tlh><span class=teams><a class=tla href='t/{slug(TN[k])}.html'>{e(TN[k])}</a>{f'<span class=tier>T{TT[k]}</span>' if TT.get(k) else ''}</span>{cal_link(f'cal/t/{slug(TN[k])}.ics',False)}</div></div>" for k,v in sorted(tours.items(),key=lambda kv:-act(kv[1])))
+        lst="".join(f"<div class='m tl'><div class=tag>{L['tl_counts'].format(u=len(v['up']),d=len(v['done']))}</div><div class=tlh><span class=teams><a class=tla href='t/{slug(TN[k])}.html'>{hn(TN[k])}</a>{f'<span class=tier>T{TT[k]}</span>' if TT.get(k) else ''}</span>{cal_link(f'cal/t/{slug(TN[k])}.ics',False)}</div></div>" for k,v in sorted(tours.items(),key=lambda kv:-act(kv[1])))
         W("tournaments.html",page(L['tours_title'],f"<h1>{L['tournaments']}</h1>"+lst,0,"tournaments.html",path="tournaments.html",desc=L['tours_desc']))
         for k,v in tm.items():
             n=TEAMS[k]; sl=slug(n); url=f"{LROOT}team/{sl}.html"
-            b=(f"<h1>{e(n)} {star(k,n,True)}</h1><p class=tag>{cal_link(f'cal/team/{sl}.ics')} · {L['team_sf']}</p>"
+            b=(f"<h1>{hn(n)} {star(k,n,True)}</h1><p class=tag>{cal_link(f'cal/team/{sl}.ics')} · {L['team_sf']}</p>"
                +sect(L['lu'],section(v['up'],'up',1,False),L['team_up_empty'],"h-up")
                +f"<details class=tbd><summary>{L['later']}</summary><p class=tag>{L['later_note']}</p>{section(v['hid'],'up',1,False) if v.get('hid') else '<p class=empty>'+L['later_none']+'</p>'}</details>"
                +sect(L['recs'],section(v['done'],'done',1,False),L['recs_empty'],"h-done"))
-            W(f"team/{sl}.html",page(L['team_title'].format(n=n),b,1,path=f"team/{sl}.html",desc=L['team_desc'].format(n=n),ld=events_ld(v['up']+v['done'],url)))
+            W(f"team/{sl}.html",page(L['team_title'].format(n=tr(n)),b,1,path=f"team/{sl}.html",desc=L['team_desc'].format(n=tr(n)),ld=events_ld(v['up']+v['done'],url)))
             if lg=='en': open(f"{OUT}/cal/team/{sl}.ics","w",newline="").write(ics(n,v['up']+v['done'],url))  # hidden later-round matches are not in v['up']
-        tl="".join(f"<li data-teams={k} data-search=\"{e(TEAMS[k].lower())}\">{star(k,TEAMS[k])}<a href='team/{slug(TEAMS[k])}.html'>{e(TEAMS[k])}</a>{'<span class=tag>'+(L['teams_up1'] if len(tm[k]['up'])==1 else L['teams_up'].format(u=len(tm[k]['up'])))+'</span>' if tm[k]['up'] else ''}</li>" for k in sorted(tm,key=lambda k:(not tm[k]['up'],TEAMS[k].lower())))
+        tl="".join(f"<li data-teams={k} data-search=\"{e(both(TEAMS[k]))}\">{star(k,TEAMS[k])}<a href='team/{slug(TEAMS[k])}.html'>{hn(TEAMS[k])}</a>{'<span class=tag>'+(L['teams_up1'] if len(tm[k]['up'])==1 else L['teams_up'].format(u=len(tm[k]['up'])))+'</span>' if tm[k]['up'] else ''}</li>" for k in sorted(tm,key=lambda k:(not tm[k]['up'],TEAMS[k].lower())))
         W("teams.html",page(L['teams_title'],f"<h1>{L['teams']}</h1><p class=tag>{L['teams_intro']}</p><label for=tq class=sr>{L['tq']}</label><input id=tq class=tq type=search placeholder='{L['tq']}' autocomplete=off><ul class=teamlist id=teamlist>"+tl+"</ul>",0,"teams.html",path="teams.html",desc=L['teams_desc']))
         W("about.html",page(L['about_title'],L['about_body'].replace('{built}',f"{dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M}")+signup(),0,"about.html",path="about.html",desc=L['about_desc']))
         if lg=='en': W("404.html",page({'en':'Page not found | NoSpoilDota','es':'Página no encontrada | NoSpoilDota','pt':'Página não encontrada | NoSpoilDota'}[lg],
@@ -604,4 +617,5 @@ def build():
     stats={"opendota_maps":len(raw),"opendota_series":len(recent),"liquipedia_upcoming":len(up),"live":len(live),"upcoming_7d":len(soon),
            "merged_live":len(used),"tournaments":len(tours),"teams":len(tm),"pages_per_lang":len(PAGES),"tiers":{t:sum(1 for s in up if s['tier']==t) for t in (1,2,3,4)}}
     json.dump(stats,open(f"{OUT}/stats.json","w")); print(stats)
+    for n in sorted(MISSING): print(f"WARNING: CJK name without translation in data/name_translations.json: {n}")
 if __name__=="__main__": build()
