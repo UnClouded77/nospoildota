@@ -110,7 +110,7 @@ h3{font-size:13px;margin:1.1em 0 .3em;color:var(--mut);text-transform:uppercase;
 .tier{font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:0 4px;margin-left:6px;color:var(--mut);vertical-align:1px;letter-spacing:0}
 .m{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:9px 12px;margin:6px 0;display:grid;grid-template-columns:150px 1fr auto;gap:4px 12px;align-items:center}
 .m.is-live{border-color:#8a2b2b;background:#1e1618}
-.when{font-size:13px;color:var(--mut)}.when .rel{display:block;color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}.when.near .rel{color:#ffb199}
+.when{font-size:13px;color:var(--mut)}.when .rel{display:block;color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}.when.near .rel{color:#ffb199}.when .rel.cd::after{content:' ·';color:var(--mut);font-weight:400}
 .teams{font-weight:600}.teams a{color:var(--fg)}.vs{color:var(--mut);font-weight:400;margin:0 6px}
 .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .btn{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid var(--bd);background:#222733;color:var(--fg);cursor:pointer;min-height:32px;display:inline-flex;align-items:center}
@@ -156,14 +156,14 @@ const ls=document.getElementById('ls-list');
 const CDS=[...document.querySelectorAll('.m[data-bo]')].map(c=>{const w=c.querySelector('[data-ts]');return{c,w,ts:+w.dataset.ts,bo:+c.dataset.bo||1,lv:c.dataset.live==='1',st:'',r0:(w.querySelector('.rel')||{}).textContent}});
 function badge(o,kind){const t=o.c.querySelector('.teams');let bd=t.querySelector('.badge');if(!bd){bd=document.createElement('span');t.append(bd)}
  bd.className='badge'+(kind==='soon'?' soon':'');bd.textContent=kind==='live'?T.LIVE:T.SOON;o.c.classList.remove('is-live','is-soon');o.c.classList.add('is-'+kind)}
-function cdtxt(d){const H=Math.floor(d/3600),M=Math.floor(d%3600/60),S=Math.floor(d%60);return T.cin.replace('%s',H?H+'h '+M+'m':M?M+'m '+String(S).padStart(2,'0')+'s':S+'s')}
+function cdtxt(d){const H=Math.floor(d/3600),M=Math.floor(d%3600/60),S=Math.floor(d%60);return H?H+'h '+M+'m':String(M).padStart(2,'0')+':'+String(S).padStart(2,'0')}
 function tick(){const n=Date.now()/1000;CDS.forEach(o=>{const d=o.ts-n,end=o.ts+o.bo*4500+(o.lv?7200:0),r=o.w.querySelector('.rel');
  const st=d>0?(d<=3600?'soon':'up'):n<end?'live':'started';
  if(st!==o.st){o.st=st;if(st==='soon')badge(o,'soon');
   if(st==='live'){badge(o,'live');o.w.dataset.kind='live';o.c.querySelectorAll('.strm').forEach(sw=>{sw.classList.remove('ghost');sw.textContent=sw.textContent.replace(T.ch,T.wl)});if(ls&&!ls.contains(o.c))ls.append(o.c)}
   if(st==='started'){o.c.classList.remove('is-live','is-soon');const b=o.c.querySelector('.badge');if(b)b.remove()}}
  if(!r)return;o.w.classList.toggle('near',d>0&&d<900);
- r.textContent=st==='live'?T.live:st==='started'?T.started:d<86400?cdtxt(d):o.r0})}
+ const cd=st!=='live'&&st!=='started'&&d<86400;r.classList.toggle('cd',cd);r.textContent=st==='live'?T.live:st==='started'?T.started:cd?cdtxt(d):o.r0})}
 let TK=null;const run=()=>{clearInterval(TK);TK=null;if(!document.hidden&&CDS.length){tick();TK=setInterval(tick,1000)}};
 document.addEventListener('visibilitychange',run);run();
 document.querySelectorAll('.byday').forEach(box=>{let last='';[...box.children].forEach(c=>{const w=c.querySelector('[data-ts]');if(!w)return;
