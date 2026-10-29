@@ -142,7 +142,7 @@ h3{font-size:13px;margin:1.1em 0 .3em;color:var(--mut);text-transform:uppercase;
 .btn:hover{border-color:var(--acc);text-decoration:none}.btn.ghost{background:none;color:var(--mut)}.btn.mini{min-height:0;padding:0 6px;font-size:11px}
 .res{grid-column:1/-1;font-size:13px;color:#ffd27a;border-top:1px dashed var(--bd);padding-top:6px;margin-top:4px}.res[hidden]{display:none}.res code{color:#fff;background:#0007;padding:0 4px;border-radius:3px}
 .badge{display:inline-block;background:var(--live);color:#fff;font-weight:800;font-size:11px;letter-spacing:.06em;border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:2px}
-.badge::before{content:"● "}.tag{color:var(--mut);font-size:12.5px}
+.badge::before{content:"● "}.tag{color:var(--mut);font-size:12.5px}.intro{color:var(--mut);font-size:14px;margin:-4px 0 10px;max-width:60ch}
 .note{background:#1a1f2a;border-left:3px solid var(--acc);padding:8px 12px;border-radius:6px;color:#c9cfdb;font-size:13.5px;margin:6px 0}
 .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px;padding:10px;background:#141821;border:1px solid var(--bd);border-radius:10px}
 .filters fieldset{border:0;margin:0;padding:0;display:flex;gap:4px;flex-wrap:wrap}.filters legend{position:absolute;left:-9999px}
@@ -532,6 +532,41 @@ def events_ld(items,url,limit=50):
         if teams: e["performer"]=teams; e["competitor"]=teams
         ev.append(e)
     return {"@context":"https://schema.org","@graph":ev} if ev else None
+SEO={'en':dict(t_h='{n} schedule',team_h='{n} schedule',
+  t_title='{n} schedule & streams – spoiler-free | NoSpoilDota',team_title='{n} next match & schedule – spoiler-free | NoSpoilDota',
+  t_in='{n} schedule in your time zone: {c} from {d}, with live streams and spoiler-free replays.',
+  t_in0='{n} schedule in your time zone, with live streams and spoiler-free replays. No upcoming matches are listed right now.',
+  team_in='{n} next match: {d}. {c} on the schedule in your time zone, with live streams and spoiler-free replays.',
+  team_in0='{n} Dota 2 schedule in your time zone, with live streams and spoiler-free replays. No upcoming matches are listed right now.',
+  one='1 upcoming Dota 2 match',many='{u} upcoming Dota 2 matches',one_t='1 upcoming match',many_t='{u} upcoming matches',home='Home'),
+ 'es':dict(t_h='Calendario de {n}',team_h='Calendario de {n}',
+  t_title='Calendario y streams de {n} – sin spoilers | NoSpoilDota',team_title='Próximo partido y calendario de {n} – sin spoilers | NoSpoilDota',
+  t_in='Calendario de {n} en tu zona horaria: {c} desde el {d}, con streams en vivo y repeticiones sin spoilers.',
+  t_in0='Calendario de {n} en tu zona horaria, con streams en vivo y repeticiones sin spoilers. Por ahora no hay partidas próximas.',
+  team_in='Próximo partido de {n}: {d}. {c} en el calendario en tu zona horaria, con streams en vivo y repeticiones sin spoilers.',
+  team_in0='Calendario de Dota 2 de {n} en tu zona horaria, con streams en vivo y repeticiones sin spoilers. Por ahora no hay partidas próximas.',
+  one='1 partida de Dota 2 próxima',many='{u} partidas de Dota 2 próximas',one_t='1 partida próxima',many_t='{u} partidas próximas',home='Inicio'),
+ 'pt':dict(t_h='Agenda: {n}',team_h='Agenda: {n}',
+  t_title='Agenda e transmissões: {n} – sem spoilers | NoSpoilDota',team_title='{n}: próxima partida e agenda – sem spoilers | NoSpoilDota',
+  t_in='Agenda de {n} no seu fuso horário: {c} a partir de {d}, com transmissões ao vivo e replays sem spoilers.',
+  t_in0='Agenda de {n} no seu fuso horário, com transmissões ao vivo e replays sem spoilers. No momento não há partidas futuras.',
+  team_in='Próxima partida de {n}: {d}. {c} na agenda no seu fuso horário, com transmissões ao vivo e replays sem spoilers.',
+  team_in0='Agenda de Dota 2 de {n} no seu fuso horário, com transmissões ao vivo e replays sem spoilers. No momento não há partidas futuras.',
+  one='1 partida de Dota 2 futura',many='{u} partidas de Dota 2 futuras',one_t='1 partida futura',many_t='{u} partidas futuras',home='Início')}
+SPF={'en':'No scores or winners.','es':'Sin marcadores ni ganadores.','pt':'Sem placares nem vencedores.'}
+def sdate(ts):
+    d=dt.datetime.fromtimestamp(ts,dt.timezone.utc)
+    return f"{MON['en'][d.month-1]} {d.day}" if LG=='en' else f"{d.day} {MON[LG][d.month-1]}"
+def intro(kind,n,items):
+    """Spoiler-free intro: counts and first date only. Never results, and never team names (hidden slots stay hidden)."""
+    S=SEO[LG]; now=time.time(); up=sorted((x for x in items if x['start']>now-6*3600),key=lambda x:x['start'])
+    if not up: return S[kind+'_in0'].format(n=n)
+    u=len(up); c=(S['one'] if u==1 else S['many'].format(u=u)) if kind=='t' else (S['one_t'] if u==1 else S['many_t'].format(u=u))
+    return S[kind+'_in'].format(n=n,c=c,d=sdate(up[0]['start']))
+def with_crumbs(ld,sec,secname,name,url):
+    bc={"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":SEO[LG]['home'],"item":LROOT},
+        {"@type":"ListItem","position":2,"name":secname,"item":LROOT+sec},{"@type":"ListItem","position":3,"name":name,"item":url}]}
+    g=(ld or {}).get("@graph",[]); return {"@context":"https://schema.org","@graph":[bc]+g}
 def build():
     raw,recent=fetch_recent(); up=fetch_upcoming(); now=time.time()
     TN,TT,TL,TLF={},{},{},{}
@@ -618,21 +653,23 @@ def build():
             n=TN[k]; sl=slug(n); url=f"{LROOT}t/{sl}.html"
             lp=f"https://liquipedia.net/dota2/{TL[k]}" if k in TL else f"https://liquipedia.net/dota2/index.php?search={urllib.parse.quote_plus(n)}"
             strm=watch_links({"streams":TS.get(k,[])},"btn",99,True,True) or f"<span class=tag>{L['no_stream']}</span>"
-            b=(f"<h1>{hn(n)}{' <span class=tier>'+L['tier_h'].format(n=TT[k])+'</span>' if TT.get(k) else ''}</h1><div class=watch>{strm}</div>"
+            ti=intro('t',tr(n),v['up'])
+            b=(f"<h1>{SEO[lg]['t_h'].replace('{n}',hn(n))}{' <span class=tier>'+L['tier_h'].format(n=TT[k])+'</span>' if TT.get(k) else ''}</h1><p class=intro>{e(ti)}</p><div class=watch>{strm}</div>"
                f"<p class=tag>{cal_link(f'cal/t/{sl}.ics')} · <a href='{lp}' rel=noopener>Liquipedia</a> {L['lp_res']}</p>"
                +sect(L['lu'],section(v['up'],'up',1,False),L['none_sched'],"h-up")+sect(L['fin'],section(v['done'],'done',1,False),L['none_yet'],"h-done"))
-            W(f"t/{sl}.html",page(L['t_title'].format(n=tr(n)),b,1,path=f"t/{sl}.html",desc=L['t_desc'].format(n=tr(n)),ld=events_ld(v['up']+v['done'],url)))
+            W(f"t/{sl}.html",page(SEO[lg]['t_title'].format(n=tr(n)),b,1,path=f"t/{sl}.html",desc=ti+' '+L['t_desc'].format(n=tr(n)).split('. ',1)[-1],ld=with_crumbs(events_ld(v['up']+v['done'],url),'tournaments.html',L['tournaments'],tr(n),url)))
             if lg=='en': open(f"{OUT}/cal/t/{sl}.ics","w",newline="").write(ics(n,[s for s in v['up']+v['done'] if s['pair']!={'tbd'}],url))
         act=lambda v:max(x['start'] for x in v['up']+v['done'])
         lst="".join(f"<div class='m tl'><div class=tag>{L['tl_counts'].format(u=len(v['up']),d=len(v['done']))}{fd(v['up'])}</div><div class=tlh><span class=teams><a class=tla href='t/{slug(TN[k])}.html'>{hn(TN[k])}</a>{f'<span class=tier>T{TT[k]}</span>' if TT.get(k) else ''}</span>{cal_link(f'cal/t/{slug(TN[k])}.ics',False)}</div></div>" for k,v in sorted(tours.items(),key=lambda kv:-act(kv[1])))
         W("tournaments.html",page(L['tours_title'],f"<h1>{L['tournaments']}</h1>"+lst,0,"tournaments.html",path="tournaments.html",desc=L['tours_desc']))
         for k,v in tm.items():
             n=TEAMS[k]; sl=slug(n); url=f"{LROOT}team/{sl}.html"
-            b=(f"<h1>{hn(n)} {star(k,n,True)}</h1><p class=tag>{cal_link(f'cal/team/{sl}.ics')} · {L['team_sf']}</p>"
+            ti=intro('team',tr(n),v['up'])
+            b=(f"<h1>{SEO[lg]['team_h'].replace('{n}',hn(n))} {star(k,n,True)}</h1><p class=intro>{e(ti)}</p><p class=tag>{cal_link(f'cal/team/{sl}.ics')} · {L['team_sf']}</p>"
                +sect(L['lu'],section(v['up'],'up',1,False),L['team_up_empty'],"h-up")
                +f"<details class=tbd><summary>{L['later']}</summary><p class=tag>{L['later_note']}</p>{section(v['hid'],'up',1,False) if v.get('hid') else '<p class=empty>'+L['later_none']+'</p>'}</details>"
                +sect(L['recs'],section(v['done'],'done',1,False),L['recs_empty'],"h-done"))
-            W(f"team/{sl}.html",page(L['team_title'].format(n=tr(n)),b,1,path=f"team/{sl}.html",desc=L['team_desc'].format(n=tr(n)),ld=events_ld(v['up']+v['done'],url)))
+            W(f"team/{sl}.html",page(SEO[lg]['team_title'].format(n=tr(n)),b,1,path=f"team/{sl}.html",desc=ti+' '+SPF[lg],ld=with_crumbs(events_ld(v['up']+v['done'],url),'teams.html',L['teams'],tr(n),url)))
             if lg=='en': open(f"{OUT}/cal/team/{sl}.ics","w",newline="").write(ics(n,v['up']+v['done'],url))  # hidden later-round matches are not in v['up']
         tl="".join(f"<li data-teams={k} data-search=\"{e(both(TEAMS[k]))}\">{star(k,TEAMS[k])}<a href='team/{slug(TEAMS[k])}.html'>{hn(TEAMS[k])}</a>{'<span class=tag>'+(L['teams_up1'] if len(tm[k]['up'])==1 else L['teams_up'].format(u=len(tm[k]['up'])))+fd(tm[k]['up'])+'</span>' if tm[k]['up'] else ''}</li>" for k in sorted(tm,key=lambda k:(not tm[k]['up'],TEAMS[k].lower())))
         W("teams.html",page(L['teams_title'],f"<h1>{L['teams']}</h1><p class=tag>{L['teams_intro']}</p><label for=tq class=sr>{L['tq']}</label><input id=tq class=tq type=search placeholder='{L['tq']}' autocomplete=off><ul class=teamlist id=teamlist>"+tl+"</ul>",0,"teams.html",path="teams.html",desc=L['teams_desc']))
