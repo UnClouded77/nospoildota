@@ -246,9 +246,13 @@ def pick_streams(name,org,st):
     for c in st: (rest if c[0] in [x[0] for x in first] else first).append(c)
     return sorted(first,key=lambda c:order[c[0]])+rest+[c for c in sec if c not in st]
 PL={'twitch':'Twitch','youtube':'YouTube','kick':'Kick'}
-def watch_links(s,cls="btn",n=2,live=False):
+def watch_links(s,cls="btn",n=2,live=False,all_=False):
     """Official channels from Liquipedia's stream data only (no search pages, no titles/thumbnails that could spoil)."""
-    return "".join(f"<a class='{cls}' href='{stream_url(pl,ch)}' target=_blank rel='noopener nofollow' title='Official live channel: {e(ch)}'>▶ {'Watch live' if live else 'Live channel'} · {PL.get(pl,pl.title())}{'' if n<3 else ' ('+e(ch.split('/')[-1].lstrip('@'))+')'}</a>" for pl,ch in s.get('streams',[])[:n]) if s.get('streams') else ""
+    st=s.get('streams',[])
+    if not all_:  # cards: one button per platform (main/English first, already ordered Twitch, YouTube, Kick), max n
+        seen=set(); st=[c for c in st if not (c[0] in seen or seen.add(c[0]))][:n]
+        return "".join(f"<a class='{cls}' href='{stream_url(pl,ch)}' target=_blank rel='noopener nofollow' title='Official live channel: {e(ch)}'>▶ {'Watch live' if live else 'Live channel'} · {PL.get(pl,pl.title())}</a>" for pl,ch in st)
+    return "".join(f"<a class='{cls}' href='{stream_url(pl,ch)}' target=_blank rel='noopener nofollow' title='Official live channel'>▶ {PL.get(pl,pl.title())} · {e(ch.split('/')[-1].lstrip('@'))}</a>" for pl,ch in st)
 def star(k,n,big=False):
     lab=f"Follow {e(n)}"
     return f"<button type=button class='star{' big' if big else ''}' data-follow={k} aria-pressed=false aria-label='{lab}' title='{lab}'><span aria-hidden=true>☆</span>{'<span class=lbl>Follow</span>' if big else ''}</button>"
@@ -358,7 +362,7 @@ def build():
     for k,v in tours.items():
         n=TN[k]; sl=slug(n); url=f"{SITE}t/{sl}.html"
         lp=f"https://liquipedia.net/dota2/{TL[k]}" if k in TL else f"https://liquipedia.net/dota2/index.php?search={urllib.parse.quote_plus(n)}"
-        strm=watch_links({"streams":TS.get(k,[])},"btn",6,True) or "<span class=tag>No official stream channel known yet.</span>"
+        strm=watch_links({"streams":TS.get(k,[])},"btn",99,True,True) or "<span class=tag>No official stream channel known yet.</span>"
         b=(f"<h1>{e(n)}{f' <span class=tier>Tier {TT[k]}</span>' if TT.get(k) else ''}</h1><div class=watch>{strm}</div>"
            f"<p class=tag><a href='../cal/t/{sl}.ics'>📅 Add to calendar (.ics)</a> · <a href='{lp}' rel=noopener>Liquipedia</a> (shows results) · times in your timezone</p>"
            +sect("Live &amp; upcoming",section(v['up'],'up',1,False),"None scheduled.","h-up")+sect("Finished",section(v['done'],'done',1,False),"None yet.","h-done"))
