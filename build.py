@@ -2,7 +2,7 @@
 """NoSpoilDota static site builder. Usage: python3 build.py  -> writes ./site/
 Data: OpenDota /proMatches (finished maps) + Liquipedia MatchTicker via the parse API
 (upcoming/live + tiers, CC-BY-SA 3.0; ONE request per build with an identifying UA, cached 1h)."""
-import json, re, time, html, os, urllib.request, urllib.parse, datetime as dt, hashlib, unicodedata
+import base64,json, re, time, html, os, urllib.request, urllib.parse, datetime as dt, hashlib, unicodedata
 from collections import defaultdict
 ROOT=os.path.dirname(os.path.abspath(__file__)); OUT=os.path.join(ROOT,'site'); CACHE=os.path.join(ROOT,'cache')
 UA="NoSpoilDota/0.2 (https://nospoildota.com/; https://github.com/UnClouded77/nospoildota; non-commercial)"
@@ -63,7 +63,8 @@ def fetch_recent():
         s=ser.setdefault(k,{"teams":sorted([rn,dn],key=str.lower),"league":m.get('league_name') or 'Unknown',"leagueid":m['leagueid'],
             "start":m['start_time'],"maps":[],"bo":{0:1,1:3,2:5,3:2}.get(m.get('series_type'),1)})
         s["start"]=min(s["start"],m['start_time'])
-        s["maps"].append({"id":m['match_id'],"t":m['start_time']})  # deliberately no winner/score/duration
+        rw=m.get('radiant_win'); w=(rn if rw else dn) if rw is not None else None
+        s["maps"].append({"id":m['match_id'],"t":m['start_time'],"w":None if w=='TBD' else w})  # winner only emitted encoded, revealed per map on click
     return out,list(ser.values())
 LP_TEXT="".join(f'<div id="nsd-tier-{t}">{{{{#invoke:Lua|invoke|module=MatchTicker/Custom|fn=mainPage|dev=false|type=upcoming|limit=60|filterbuttons-liquipediatier={t}}}}}</div>' for t in (1,2,3,4))
 def fetch_upcoming():
@@ -135,8 +136,8 @@ footer{color:var(--mut);font-size:12px;text-align:center;padding:24px 16px;borde
 .watch{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.rp a{margin-right:8px}
 @media(max-width:640px){.star{min-width:44px;min-height:44px}.m{grid-template-columns:1fr}.m .when{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.m .when .rel{display:inline}.m .acts .btn{flex:1 1 auto;justify-content:center}.acts{justify-content:flex-start}main{padding:10px 12px}}"""
 CSS+="\nheader .logo{grid-area:logo}header nav{grid-area:nav;min-width:0}.lang{grid-area:lang;justify-self:end;font-size:13px;color:var(--mut);border:1px solid var(--bd);border-radius:14px;padding:2px 10px;white-space:nowrap}.lang a{color:var(--mut);padding:2px}@media(max-width:640px){header{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'logo lang' 'nav nav'}}.lang a[aria-current]{color:var(--fg);font-weight:700}#eshint{margin:6px 0}#eshint[hidden]{display:none}"
-JS=r"""(()=>{const HL=document.documentElement.lang,LG=HL==='es'?'es':HL==='pt-BR'?'pt':'en',LOC={es:'es',pt:'pt-BR',en:[]}[LG],T={pt:{live:'Ao vivo',inm:'em %s min',inh:'em %s h',today:'hoje ',tom:'começa amanhã',ind:'em %s dias',soon:'começando em breve',agom:'há %s min',agoh:'há %s h',yest:'ontem',agod:'há %s dias',LIVE:'AO VIVO',SOON:'EM BREVE',ch:'Canal ao vivo',wl:'Assistir ao vivo',rv:'Mostrar replays',hd:'Ocultar replays',cf:'Mostrar os links de replay? A quantidade de links revela quantos jogos foram disputados.',cp:'copiado',fol:'Seguir',unf:'Deixar de seguir',fing:'Seguindo',tz:'horário local'},es:{live:'En vivo',inm:'en %s min',inh:'en %s h',today:'hoy ',tom:'empieza mañana',ind:'en %s días',soon:'por comenzar',agom:'hace %s min',agoh:'hace %s h',yest:'ayer',agod:'hace %s días',LIVE:'EN VIVO',SOON:'PRONTO',ch:'Canal en vivo',wl:'Ver en vivo',rv:'Mostrar repeticiones',hd:'Ocultar repeticiones',cf:'¿Mostrar los enlaces de repetición? La cantidad de enlaces revela cuántos juegos se jugaron.',cp:'copiado',fol:'Seguir',unf:'Dejar de seguir',fing:'Siguiendo',tz:'hora local'},
-en:{live:'Live now',inm:'in %s min',inh:'in %sh',today:'today ',tom:'starts tomorrow',ind:'in %s days',soon:'starting soon',agom:'%s min ago',agoh:'%sh ago',yest:'yesterday',agod:'%s days ago',LIVE:'LIVE',SOON:'SOON',ch:'Live channel',wl:'Watch live',rv:'Reveal replays',hd:'Hide replays',cf:'Show replay links? The number of links shows how many games were played.',cp:'copied',fol:'Follow',unf:'Unfollow',fing:'Following',tz:'local time'}}[LG],
+JS=r"""(()=>{const HL=document.documentElement.lang,LG=HL==='es'?'es':HL==='pt-BR'?'pt':'en',LOC={es:'es',pt:'pt-BR',en:[]}[LG],T={pt:{live:'Ao vivo',inm:'em %s min',inh:'em %s h',today:'hoje ',tom:'começa amanhã',ind:'em %s dias',soon:'começando em breve',agom:'há %s min',agoh:'há %s h',yest:'ontem',agod:'há %s dias',LIVE:'AO VIVO',SOON:'EM BREVE',ch:'Canal ao vivo',wl:'Assistir ao vivo',rv:'Mostrar replays',won:'%s venceu',na:'Resultado indisponível',hd:'Ocultar replays',cf:'Mostrar os links de replay? A quantidade de links revela quantos jogos foram disputados.',cp:'copiado',fol:'Seguir',unf:'Deixar de seguir',fing:'Seguindo',tz:'horário local'},es:{live:'En vivo',inm:'en %s min',inh:'en %s h',today:'hoy ',tom:'empieza mañana',ind:'en %s días',soon:'por comenzar',agom:'hace %s min',agoh:'hace %s h',yest:'ayer',agod:'hace %s días',LIVE:'EN VIVO',SOON:'PRONTO',ch:'Canal en vivo',wl:'Ver en vivo',rv:'Mostrar repeticiones',won:'Ganó %s',na:'Resultado no disponible',hd:'Ocultar repeticiones',cf:'¿Mostrar los enlaces de repetición? La cantidad de enlaces revela cuántos juegos se jugaron.',cp:'copiado',fol:'Seguir',unf:'Dejar de seguir',fing:'Siguiendo',tz:'hora local'},
+en:{live:'Live now',inm:'in %s min',inh:'in %sh',today:'today ',tom:'starts tomorrow',ind:'in %s days',soon:'starting soon',agom:'%s min ago',agoh:'%sh ago',yest:'yesterday',agod:'%s days ago',LIVE:'LIVE',SOON:'SOON',ch:'Live channel',wl:'Watch live',rv:'Reveal replays',won:'%s won',na:'Result not available',hd:'Hide replays',cf:'Show replay links? The number of links shows how many games were played.',cp:'copied',fol:'Follow',unf:'Unfollow',fing:'Following',tz:'local time'}}[LG],
 f=(k,n)=>T[k].replace('%s',n);
 const now=Date.now()/1000,fmt=new Intl.DateTimeFormat(LOC, {weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),
 tf=new Intl.DateTimeFormat(LOC, {hour:'2-digit',minute:'2-digit'}),day=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()};
@@ -160,6 +161,8 @@ document.querySelectorAll('.byday').forEach(box=>{let last='';[...box.children].
 const tz=document.getElementById('tzname');if(tz)tz.textContent=Intl.DateTimeFormat().resolvedOptions().timeZone||T.tz;
 document.addEventListener('click',ev=>{const b=ev.target.closest('.reveal');if(b){const r=document.getElementById(b.dataset.for);
  if(!r.hidden){r.hidden=true;b.textContent=T.rv;b.setAttribute('aria-expanded','false')}else if(confirm(T.cf)){r.hidden=false;b.textContent=T.hd;b.setAttribute('aria-expanded','true')}return}
+ const w=ev.target.closest('.wres');if(w){if(w.dataset.done)return;w.dataset.done=1;let n='';try{n=new TextDecoder().decode(Uint8Array.from(atob(w.dataset.w),x=>x.charCodeAt(0)))}catch(_){}
+ w.textContent=n?T.won.replace('%s',n):T.na;w.classList.add('shown');return}
  const c=ev.target.closest('.copy');if(c&&navigator.clipboard){navigator.clipboard.writeText(c.dataset.copy);c.textContent=T.cp}});
 const FK='nsd-follow';let fol=new Set();try{fol=new Set(JSON.parse(localStorage.getItem(FK)||'[]'))}catch(_){}
 function paint(){document.querySelectorAll('[data-follow]').forEach(b=>{const on=fol.has(b.dataset.follow),n=b.dataset.n;
@@ -189,7 +192,7 @@ STR={
  desc='Spoiler-free Dota 2 pro match calendar and replay finder: schedules, live badges and official streams with no scores.',
  ch='Live channel',wl='Watch live',ch_title='Official live channel',follow='Follow',tier_title='Liquipedia tier {n}',
  replay='Replay {i}: match ID',copy='copy',client='Watch in the Dota 2 client: Watch → Replays → search the match ID (kept about two weeks). Stats sites such as OpenDota show the result.',
- reveal='Reveal replays',tbd1='+ {n} later-round slot, teams TBD',tbdn='+ {n} later-round slots, teams TBD',
+ reveal='Reveal replays',showres='Show result',tbd1='+ {n} later-round slot, teams TBD',tbdn='+ {n} later-round slots, teams TBD',
  sub_summary='Optional: a weekly spoiler-free “what to watch” email',subscribe='Subscribe',email='Email',email_ph='you@example.com',
  lg_tier='Tier',t1='Tier 1',t12='Tier 1–2',t13='Tier 1–3',all='All',lg_fol='Followed teams',mine='★ My teams',ffirst='Followed first',
  q_label='Filter by team or tournament',q_ph='Search team or tournament…',filt_help='Tap ☆ next to a team to follow it (saved on this device only). Tiers from Liquipedia. Leagues it doesn’t list only appear under “All”.',
@@ -224,7 +227,7 @@ STR={
  desc='Calendario de partidas profesionales de Dota 2 sin spoilers y buscador de repeticiones: horarios, avisos en vivo y streams oficiales, sin marcadores.',
  ch='Canal en vivo',wl='Ver en vivo',ch_title='Canal oficial en vivo',follow='Seguir',tier_title='Tier {n} de Liquipedia',
  replay='Repetición {i}: ID de partida',copy='copiar',client='Míralo en el cliente de Dota 2: Ver → Repeticiones → busca el ID de partida (se guardan unas dos semanas). Los sitios de estadísticas como OpenDota muestran el resultado.',
- reveal='Mostrar repeticiones',tbd1='+ {n} cupo de rondas posteriores, equipos por definir',tbdn='+ {n} cupos de rondas posteriores, equipos por definir',
+ reveal='Mostrar repeticiones',showres='Mostrar resultado',tbd1='+ {n} cupo de rondas posteriores, equipos por definir',tbdn='+ {n} cupos de rondas posteriores, equipos por definir',
  sub_summary='Opcional: un correo semanal sin spoilers de “qué ver”',subscribe='Suscribirme',email='Correo',email_ph='tu@ejemplo.com',
  lg_tier='Tier',t1='Tier 1',t12='Tier 1–2',t13='Tier 1–3',all='Todos',lg_fol='Equipos seguidos',mine='★ Mis equipos',ffirst='Seguidos primero',
  q_label='Filtrar por equipo o torneo',q_ph='Buscar equipo o torneo…',filt_help='Toca ☆ junto a un equipo para seguirlo (se guarda solo en este dispositivo). Tiers de Liquipedia. Las ligas que no aparecen ahí solo se muestran en “Todos”.',
@@ -259,7 +262,7 @@ STR={
  desc='Agenda de partidas profissionais de Dota 2 sem spoilers e buscador de replays: horários, avisos ao vivo e transmissões oficiais, sem placares.',
  ch='Canal ao vivo',wl='Assistir ao vivo',ch_title='Canal oficial ao vivo',follow='Seguir',tier_title='Tier {n} da Liquipedia',
  replay='Replay {i}: ID da partida',copy='copiar',client='Assista no cliente do Dota 2: Assistir → Replays → busque o ID da partida (ficam disponíveis por cerca de duas semanas). Sites de estatísticas como o OpenDota mostram o resultado.',
- reveal='Mostrar replays',tbd1='+ {n} vaga de rodadas seguintes, times a definir',tbdn='+ {n} vagas de rodadas seguintes, times a definir',
+ reveal='Mostrar replays',showres='Mostrar resultado',tbd1='+ {n} vaga de rodadas seguintes, times a definir',tbdn='+ {n} vagas de rodadas seguintes, times a definir',
  sub_summary='Opcional: um e-mail semanal sem spoilers com “o que assistir”',subscribe='Inscrever-se',email='E-mail',email_ph='voce@exemplo.com',
  lg_tier='Tier',t1='Tier 1',t12='Tier 1–2',t13='Tier 1–3',all='Todos',lg_fol='Times seguidos',mine='★ Meus times',ffirst='Seguidos primeiro',
  q_label='Filtrar por time ou torneio',q_ph='Buscar time ou torneio…',filt_help='Toque em ☆ ao lado de um time para segui-lo (fica salvo só neste aparelho). Tiers da Liquipedia. Ligas que não aparecem lá só são mostradas em “Todos”.',
@@ -316,10 +319,10 @@ def page(title,body,depth=0,cur=None,path="",desc=None,ld=None,nolist=False):
     ldj=f'<script type="application/ld+json">{json.dumps(ld,ensure_ascii=False).replace("</","<\\/")}</script>' if ld else ""
     NAV=[("index.html",L['matches']),("tournaments.html",L['tournaments']),("teams.html",L['teams']),("about.html",L['about'])]
     nav="".join(f"<a href='{p}{h}'{' aria-current=page' if h==cur else ''}>{t}</a>" for h,t in NAV)
-    sw="<span class=lang>"+" | ".join(f"<a href='/{PFX[x]}{path}' hreflang={HLANG[x]} lang={HLANG[x]}{' aria-current=true' if LG==x else ''}>{x.upper()}</a>" for x in LANGS)+"</span>"
+    sw="<span class=lang>"+" | ".join(f"<a href='/{PFX[x]}{path}' hreflang={HLANG[x]} lang={HLANG[x]} data-lg={x}{' aria-current=true' if LG==x else ''}>{x.upper()}</a>" for x in LANGS)+"</span>"
     hint="".join(f"<p id={x}hint class=note lang={HLANG[x]} hidden>{HINTS[x].format(u='/'+PFX[x]+path)}</p>" for x in ('es','pt') if x!=LG and not (x=='es' and LG!='en'))
     alt="".join(f'<link rel=alternate hreflang={HLANG[x]} href="{SITE+PFX[x]+path}">' for x in LANGS)+f'<link rel=alternate hreflang=x-default href="{SITE+path}">'
-    return f"""<!doctype html><html lang={HLANG[LG]}><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{e(title)}</title>
+    return f"""<!doctype html><html lang={HLANG[LG]}><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{e(title)}</title>{LANG_JS.replace("@L",LG)}
 <meta name=description content="{e(desc)}"><link rel=canonical href="{can}">{alt}<meta property=og:type content=website><meta property=og:site_name content=NoSpoilDota><meta property=og:locale content={L['locale']}><meta property=og:title content="{e(title)}"><meta property=og:description content="{e(desc)}"><meta property=og:url content="{can}"><meta name=twitter:card content=summary><meta name=color-scheme content=dark>{ldj}<link rel=stylesheet href="{r}style.css?v={ASSET_V}"></head><body>
 <a class=skip href="#main">{L['skip']}</a><header><a class=logo href="{p}index.html">NoSpoil<span>Dota</span></a>{sw}<nav aria-label={L['main_nav']}>{nav}</nav></header>
 <main id=main>{hint}{body}</main><footer>{L['foot'].format(p=p)}</footer><script src="{r}app.js?v={ASSET_V}" defer></script><script data-goatcounter="https://nospoildota.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script></body></html>"""
@@ -398,6 +401,11 @@ def watch_links(s,cls="btn",n=2,live=False,all_=False):
 def star(k,n,big=False):
     lab=f"{L['follow']} {e(n)}"
     return f"<button type=button class='star{' big' if big else ''}' data-follow={k} data-n=\"{e(n)}\" aria-pressed=false aria-label='{lab}' title='{lab}'><span aria-hidden=true>☆</span>{'<span class=lbl>'+L['follow']+'</span>' if big else ''}</button>"
+LANG_JS="""<script>(function(){var C='@L',K='nsd-lang',P={en:'/',es:'/es/',pt:'/pt/'},s=null;try{s=localStorage.getItem(K)}catch(e){}
+document.addEventListener('click',function(v){var a=v.target.closest&&v.target.closest('a[data-lg]');if(a)try{localStorage.setItem(K,a.dataset.lg)}catch(e){}});
+if(navigator.webdriver||/bot|crawl|spider/i.test(navigator.userAgent)||/[?&]lang=en(&|$)/.test(location.search))return;
+var t=null;if(s&&P[s])t=s;else if(C==='en'&&!(document.referrer&&new URL(document.referrer).host===location.host)){var l=(navigator.languages||[navigator.language||'']);for(var i=0;i<l.length;i++){var x=(l[i]||'').toLowerCase();if(x.indexOf('es')===0){t='es';break}if(x.indexOf('pt')===0){t='pt';break}if(x.indexOf('en')===0)break}}
+if(!t||t===C)return;var r=location.pathname.replace(/^\\/(es|pt)\\//,'/');location.replace(P[t]+r.slice(1)+location.search+location.hash)})()</script>"""
 def card(s,d,ctx,TEAMS):
     a,b=s['teams']; uid="r"+hashlib.md5(f"{s['start']}{a}{b}{s['tname']}".encode()).hexdigest()[:8]
     live=s.get('live')
@@ -408,7 +416,7 @@ def card(s,d,ctx,TEAMS):
     attrs=f"class=m{' data-bo='+str(s['bo'])+(' data-live=1' if live else '') if ctx=='up' else ''} data-tier={s.get('tier') or 9} data-teams=\"{' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e(f'{a} {b} {s[chr(116)+"name"]}'.lower())}\""
     if ctx=='up':
         return f"<div {attrs}>{head}<div class=acts>{watch_links(s,'btn ghost strm',2)}</div></div>"
-    maps="<br>".join(f"<span class=rp>{L['replay'].format(i=i+1)} <code>{m['id']}</code> <button class='btn ghost mini copy' data-copy={m['id']}>{L['copy']}</button></span>"
+    maps="<br>".join(f"<span class=rp>{L['replay'].format(i=i+1)} <code>{m['id']}</code> <button class='btn ghost mini copy' data-copy={m['id']}>{L['copy']}</button> <button type=button class='btn ghost mini wres' data-w=\"{base64.b64encode(m['w'].encode()).decode() if m.get('w') else ''}\" aria-live=polite>{L['showres']}</button></span>"
                   for i,m in enumerate(sorted(s['maps'],key=lambda m:m['t'])))
     maps+=f"<br><span class=tag>{L['client']}</span>"
     return (f"<div {attrs}>{head}<div class=acts><button class='btn reveal' data-for={uid} aria-expanded=false aria-controls={uid}>{L['reveal']}</button></div>"
