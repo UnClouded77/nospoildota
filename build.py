@@ -510,17 +510,27 @@ def ics(name,items,url):
     return "\r\n".join(fold(x) for x in L)+"\r\n"
 
 def iso(ts): return dt.datetime.fromtimestamp(ts,dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+DESC={'en':'Spoiler-free Dota 2 pro match: {a} vs {b} (Bo{bo}), {t}. Watch live on the official stream.',
+ 'es':'Partida profesional de Dota 2 sin spoilers: {a} vs {b} (Bo{bo}), {t}. Mírala en vivo en el stream oficial.',
+ 'pt':'Partida profissional de Dota 2 sem spoilers: {a} vs {b} (Bo{bo}), {t}. Assista ao vivo na transmissão oficial.'}
 def events_ld(items,url,limit=50):
     """schema.org SportsEvent list. Teams, time, tournament only - never winners, scores or game counts."""
     ev=[]
     for s in sorted(items,key=lambda x:x['start'])[:limit]:
-        if s['pair']=={'tbd'} or s.get('hid'): continue
-        ev.append({"@type":"SportsEvent","name":f"{tr(s['teams'][0])} vs {tr(s['teams'][1])} (Bo{s['bo']}) – {tr(s['tname'])}","sport":"Dota 2",
-            "startDate":iso(s['start']),"eventAttendanceMode":"https://schema.org/OnlineEventAttendanceMode",
-            "location":{"@type":"VirtualLocation","url":url},"url":url,"organizer":{"@type":"Organization","name":tr(s['tname'])},
-            "competitor":[{"@type":"SportsTeam","name":tr(t)} for t in s['teams'] if t!='TBD'],
-            "superEvent":{"@type":"SportsEvent","name":tr(s['tname']),"url":f"{LROOT}t/{slug(s['tname'])}.html"}})
-        if s['start']>time.time(): ev[-1]["eventStatus"]="https://schema.org/EventScheduled"
+        if s['pair']=={'tbd'} or s.get('hid') or not s.get('start'): continue
+        st=s.get('streams') or []
+        su=stream_url(*st[0]) if st else url
+        tn=tr(s['tname']); a,b=(tr(t) for t in s['teams'][:2])
+        e={"@type":"SportsEvent","name":f"{a} vs {b} (Bo{s['bo']}) – {tn}","sport":"Dota 2",
+            "description":DESC[LG].format(a=a,b=b,bo=s['bo'],t=tn),
+            "startDate":iso(s['start']),"eventStatus":"https://schema.org/EventScheduled",
+            "eventAttendanceMode":"https://schema.org/OnlineEventAttendanceMode",
+            "location":{"@type":"VirtualLocation","url":su},"url":url,
+            "organizer":{"@type":"Organization","name":tn,"url":f"{LROOT}t/{slug(s['tname'])}.html"},
+            "offers":{"@type":"Offer","price":0,"priceCurrency":"USD","availability":"https://schema.org/InStock","url":su}}
+        teams=[{"@type":"SportsTeam","name":tr(t)} for t in s['teams'] if t!='TBD']
+        if teams: e["performer"]=teams; e["competitor"]=teams
+        ev.append(e)
     return {"@context":"https://schema.org","@graph":ev} if ev else None
 def build():
     raw,recent=fetch_recent(); up=fetch_upcoming(); now=time.time()
