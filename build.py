@@ -242,7 +242,7 @@ STR={
  q_label='Filter by team or tournament',q_ph='Search team or tournament…',filt_help='Tap ☆ next to a team to follow it (saved on this device only). Tiers from Liquipedia. Leagues it doesn’t list only appear under “All”.',
  h1_home='Spoiler-free Dota 2 pro match schedule',ls='Live &amp; starting soon',ls_empty='Nothing live or starting within the hour for this filter.',
  note='<b>Spoiler-free:</b> no winners, scores or game counts, only the best-of. Replay links stay hidden until you press <b>Reveal replays</b>.',
- upc='Upcoming · next 7 days',upc_empty='No upcoming matches for this filter.',rec='Recently finished',rec_empty='No finished series for this filter. Try “All”.',
+ upc='Upcoming · next 7 days',upc_empty='No upcoming matches for this filter.',rec='Recently finished',rec_empty='No finished series for this filter. Try “All”.',am_rec_empty='No matches for this search.',
  home_title='Dota 2 pro match schedule – spoiler-free | NoSpoilDota',home_desc='Spoiler-free Dota 2 pro match calendar: live and upcoming series, official streams and replay IDs, with no scores or winners.',
  tier_h='Tier {n}',no_stream='No official stream channel known yet.',add_cal='📅 Add to calendar (.ics)',lp_res='(shows results) · times in your timezone',
  lu='Live &amp; upcoming',none_sched='None scheduled.',fin='Finished',none_yet='None yet.',
@@ -254,7 +254,7 @@ STR={
  teams_counts='{u} upcoming · {d} recent',teams_intro='Follow your teams to pin their matches and get a calendar feed.',teams_up='{u} upcoming',teams_up1='1 upcoming',tq='Search teams…',
  teams_title='Dota 2 pro teams – spoiler-free schedules | NoSpoilDota',teams_desc='Follow Dota 2 pro teams: spoiler-free match schedules and calendar feeds for every team.',
  about_title='About NoSpoilDota – spoiler-free Dota 2 calendar',about_desc='How NoSpoilDota keeps Dota 2 schedules spoiler-free, and where the data comes from (OpenDota, Liquipedia CC-BY-SA).',
- about_body="""<h1>About NoSpoilDota</h1><p>A spoiler-free calendar of professional Dota 2 matches. Find the VOD without seeing who won first.</p>
+ about_body="""<h1>About NoSpoilDota</h1><p class="note" style="font-style:italic">Hey, I’m UnClouded77. I’ve put over 5,000 hours into Dota 2, and I started NoSpoilDota because I wanted an easier way to see upcoming pro matches and catch up on games without getting spoiled. I love watching pro Dota and streamers like Gorgc, Sheever, DNM, ODPixel, SirActionSlacks, Arteezy and Purge, so this is the site I wanted for myself.</p><p>A spoiler-free calendar of professional Dota 2 matches. Find the VOD without seeing who won first.</p>
 <h2>How it stays spoiler-free</h2><ul><li>Lists show only teams, tournament, start time and best-of. Winners, scores and the number of games played are never shown; each series shows only its best-of. Replay match IDs stay behind <b>Reveal replays</b>.</li>
 <li>Watch links go only to official Twitch/YouTube/Kick channels listed by Liquipedia. No search pages, whose titles and thumbnails spoil.</li>
 <li>A series being played right now gets a LIVE badge and appears under <b>Live &amp; starting soon</b>, then moves to <b>Recently finished</b> afterwards.</li></ul>
@@ -277,7 +277,7 @@ STR={
  q_label='Filtrar por equipo o torneo',q_ph='Buscar equipo o torneo…',filt_help='Toca ☆ junto a un equipo para seguirlo (se guarda solo en este dispositivo). Tiers de Liquipedia. Las ligas que no aparecen ahí solo se muestran en “Todos”.',
  h1_home='Calendario de partidas profesionales de Dota 2 sin spoilers',ls='En vivo y por comenzar',ls_empty='No hay nada en vivo ni por comenzar en la próxima hora con este filtro.',
  note='<b>Sin spoilers:</b> sin ganadores, marcadores ni cantidad de juegos; solo el formato (Bo3, Bo5…). Los enlaces de repetición quedan ocultos hasta que tocas <b>Mostrar repeticiones</b>.',
- upc='Próximas · siguientes 7 días',upc_empty='No hay partidas próximas con este filtro.',rec='Terminadas recientemente',rec_empty='No hay series terminadas con este filtro. Prueba con “Todos”.',
+ upc='Próximas · siguientes 7 días',upc_empty='No hay partidas próximas con este filtro.',rec='Terminadas recientemente',rec_empty='No hay series terminadas con este filtro. Prueba con “Todos”.',am_rec_empty='No hay partidas para esta búsqueda.',
  home_title='Calendario de Dota 2 pro – sin spoilers | NoSpoilDota',home_desc='Calendario de partidas profesionales de Dota 2 sin spoilers: series en vivo y próximas, streams oficiales e IDs de repeticiones, sin marcadores ni ganadores.',
  tier_h='Tier {n}',no_stream='Todavía no se conoce un canal oficial de transmisión.',add_cal='📅 Agregar al calendario (.ics)',lp_res='(muestra resultados) · horarios en tu zona horaria',
  lu='En vivo y próximas',none_sched='Nada programado.',fin='Terminadas',none_yet='Ninguna todavía.',
@@ -289,7 +289,7 @@ STR={
  teams_counts='{u} próximas · {d} recientes',teams_intro='Sigue a tus equipos para fijar sus partidas y tener un feed de calendario.',teams_up='{u} próximas',teams_up1='1 próxima',tq='Buscar equipos…',
  teams_title='Equipos pro de Dota 2 – calendarios sin spoilers | NoSpoilDota',teams_desc='Sigue a equipos profesionales de Dota 2: calendarios de partidas sin spoilers y feeds de calendario para cada equipo.',
  about_title='Acerca de NoSpoilDota – calendario de Dota 2 sin spoilers',about_desc='Cómo NoSpoilDota mantiene los calendarios de Dota 2 sin spoilers y de dónde vienen los datos (OpenDota, Liquipedia CC-BY-SA).',
- about_body="""<h1>Acerca de NoSpoilDota</h1><p>Un calendario sin spoilers de partidas profesionales de Dota 2. Encuentra el VOD sin enterarte antes de quién ganó.</p>
+ about_body="""<h1>Acerca de NoSpoilDota</h1><p class="note" style="font-style:italic">Hola, soy UnClouded77. Llevo más de 5.000 horas jugando Dota 2 y creé NoSpoilDota porque quería una forma más fácil de ver las próximas partidas profesionales y ponerme al día con los juegos sin comerme spoilers. Me encanta ver Dota profesional y a streamers como Gorgc, Sheever, DNM, ODPixel, SirActionSlacks, Arteezy y Purge, así que este es el sitio que quería para mí.</p><p>Un calendario sin spoilers de partidas profesionales de Dota 2. Encuentra el VOD sin enterarte antes de quién ganó.</p>
 <h2>Cómo se mantiene sin spoilers</h2><ul><li>Las listas muestran solo los equipos, el torneo, la hora de inicio y el formato. Nunca mostramos ganadores, marcadores ni cuántos juegos se jugaron; cada serie muestra solo su formato (Bo3, Bo5…). Los IDs de repetición quedan detrás de <b>Mostrar repeticiones</b>.</li>
 <li>Los enlaces para ver van solo a canales oficiales de Twitch/YouTube/Kick que lista Liquipedia. Nada de páginas de búsqueda, cuyos títulos y miniaturas hacen spoiler.</li>
 <li>Una serie que se está jugando ahora lleva la etiqueta EN VIVO y aparece en <b>En vivo y por comenzar</b>; después pasa a <b>Terminadas recientemente</b>.</li></ul>
@@ -312,7 +312,7 @@ STR={
  q_label='Filtrar por time ou torneio',q_ph='Buscar time ou torneio…',filt_help='Toque em ☆ ao lado de um time para segui-lo (fica salvo só neste aparelho). Tiers da Liquipedia. Ligas que não aparecem lá só são mostradas em “Todos”.',
  h1_home='Agenda de partidas profissionais de Dota 2 sem spoilers',ls='Ao vivo e começando em breve',ls_empty='Nada ao vivo nem começando na próxima hora com este filtro.',
  note='<b>Sem spoilers:</b> sem vencedores, placares nem quantidade de jogos; só o formato (Bo3, Bo5…). Os links de replay ficam ocultos até você tocar em <b>Mostrar replays</b>.',
- upc='Próximas · próximos 7 dias',upc_empty='Nenhuma partida próxima com este filtro.',rec='Encerradas recentemente',rec_empty='Nenhuma série encerrada com este filtro. Tente “Todos”.',
+ upc='Próximas · próximos 7 dias',upc_empty='Nenhuma partida próxima com este filtro.',rec='Encerradas recentemente',rec_empty='Nenhuma série encerrada com este filtro. Tente “Todos”.',am_rec_empty='Nenhuma partida para esta busca.',
  home_title='Agenda de Dota 2 pro – sem spoilers | NoSpoilDota',home_desc='Agenda de partidas profissionais de Dota 2 sem spoilers: séries ao vivo e próximas, transmissões oficiais e IDs de replay, sem placares nem vencedores.',
  tier_h='Tier {n}',no_stream='Ainda não há um canal oficial de transmissão conhecido.',add_cal='📅 Adicionar à agenda (.ics)',lp_res='(mostra resultados) · horários no seu fuso',
  lu='Ao vivo e próximas',none_sched='Nada agendado.',fin='Encerradas',none_yet='Nenhuma ainda.',
@@ -324,7 +324,7 @@ STR={
  teams_counts='{u} próximas · {d} recentes',teams_intro='Siga seus times para fixar as partidas deles e ter um feed de calendário.',teams_up='{u} próximas',teams_up1='1 próxima',tq='Buscar times…',
  teams_title='Times pro de Dota 2 – agendas sem spoilers | NoSpoilDota',teams_desc='Siga times profissionais de Dota 2: agendas de partidas sem spoilers e feeds de calendário para cada time.',
  about_title='Sobre o NoSpoilDota – agenda de Dota 2 sem spoilers',about_desc='Como o NoSpoilDota mantém as agendas de Dota 2 sem spoilers e de onde vêm os dados (OpenDota, Liquipedia CC-BY-SA).',
- about_body="""<h1>Sobre o NoSpoilDota</h1><p>Uma agenda sem spoilers de partidas profissionais de Dota 2. Encontre o VOD sem descobrir antes quem venceu.</p>
+ about_body="""<h1>Sobre o NoSpoilDota</h1><p class="note" style="font-style:italic">Oi, eu sou o UnClouded77. Já joguei mais de 5.000 horas de Dota 2 e criei o NoSpoilDota porque queria um jeito mais fácil de ver as próximas partidas profissionais e acompanhar os jogos sem levar spoiler. Adoro assistir Dota profissional e streamers como Gorgc, Sheever, DNM, ODPixel, SirActionSlacks, Arteezy e Purge, então este é o site que eu queria para mim.</p><p>Uma agenda sem spoilers de partidas profissionais de Dota 2. Encontre o VOD sem descobrir antes quem venceu.</p>
 <h2>Como tudo fica sem spoilers</h2><ul><li>As listas mostram só os times, o torneio, o horário de início e o formato. Nunca mostramos vencedores, placares nem quantos jogos foram disputados; cada série mostra só o formato (Bo3, Bo5…). Os IDs de replay ficam atrás de <b>Mostrar replays</b>.</li>
 <li>Os links para assistir levam só a canais oficiais da Twitch/YouTube/Kick listados pela Liquipedia. Nada de páginas de busca, cujos títulos e miniaturas dão spoiler.</li>
 <li>Uma série sendo jogada agora ganha o selo AO VIVO e aparece em <b>Ao vivo e começando em breve</b>; depois passa para <b>Encerradas recentemente</b>.</li></ul>
@@ -653,7 +653,7 @@ def build():
         ab=(f"<h1>{L['am_h1']}</h1><p class=intro>{L['am_intro']}</p><section class=sect id=ls aria-labelledby=h-live><h2 id=h-live>{L['ls']}</h2><div id=ls-list></div><p class=empty>{L['ls_empty']}</p></section>"
               f"<p class=note>{L['note']}</p>"+afilt
               +sect(L['upc'],section([s for s in soon if am(s)],'up'),L['upc_empty'],"h-up")
-              +sect(L['rec'],section([s for s in recent if am(s)],'done',limit=80),L['rec_empty'],"h-done"))
+              +sect(L['rec'],section([s for s in recent if am(s)],'done',limit=80),L['am_rec_empty'],"h-done"))
         W("amateur.html",page(L['am_title'],ab,0,"amateur.html",path="amateur.html",desc=L['am_desc'],ld=events_ld([s for s in upcoming if am(s)],LROOT+'amateur.html',30)))
         W("index.html",page(L['home_title'],body,0,"index.html",path="",desc=L['home_desc'],ld=events_ld(upcoming,LROOT,30)))
         for k,v in tours.items():
