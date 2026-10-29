@@ -67,6 +67,9 @@ def fetch_recent():
         s["maps"].append({"id":m['match_id'],"t":m['start_time'],"w":None if w=='TBD' else w})  # winner only emitted encoded, revealed per map on click
     return out,list(ser.values())
 LP_TEXT="".join(f'<div id="nsd-tier-{t}">{{{{#invoke:Lua|invoke|module=MatchTicker/Custom|fn=mainPage|dev=false|type=upcoming|limit=60|filterbuttons-liquipediatier={t}}}}}</div>' for t in (1,2,3,4))
+def fd(up):
+    up=[x['start'] for x in up if x.get('start')]
+    return f"<span data-fd={min(up)}></span>" if up else ''
 def fetch_upcoming():
     """ONE Liquipedia parse request that renders the match ticker once per tier, so each match carries its tier."""
     try:
@@ -151,6 +154,8 @@ function rel(ts,kind){const d=ts-now,a=Math.abs(d),dd=Math.round((day(ts*1000)-d
  if(kind==='up')return T.soon;if(a<3600)return f('agom',Math.round(a/60));if(a<86400)return f('agoh',Math.round(a/3600));if(dd===-1)return T.yest;return f('agod',Math.round(a/86400))}
 document.querySelectorAll('[data-ts]').forEach(e=>{const ts=+e.dataset.ts,full=fmt.format(new Date(ts*1000)),r=rel(ts,e.dataset.kind);
  e.textContent='';if(r){const s=document.createElement('span');s.className='rel';s.textContent=r;e.append(s,' ')}e.append(full);e.title=full});
+{const FT={en:['from %s','from today','from tomorrow'],es:['desde %s','desde hoy','desde mañana'],pt:['a partir de %s','a partir de hoje','a partir de amanhã']}[LG],df=new Intl.DateTimeFormat(LOC,{month:'short',day:'numeric'});
+document.querySelectorAll('[data-fd]').forEach(e=>{const ms=+e.dataset.fd*1000,dd=Math.round((day(ms)-day(Date.now()))/864e5);e.textContent=' · '+(dd<=0?FT[1]:dd===1?FT[2]:FT[0].replace('%s',df.format(new Date(ms)).replace('.','')));e.title=fmt.format(new Date(ms))})}
 const nl=(navigator.language||'').toLowerCase();[['eshint','es'],['pthint','pt']].forEach(([id,p])=>{const h=document.getElementById(id);if(h&&nl.startsWith(p))h.hidden=false});
 const ls=document.getElementById('ls-list');
 const CDS=[...document.querySelectorAll('.m[data-bo]')].map(c=>{const w=c.querySelector('[data-ts]');return{c,w,ts:+w.dataset.ts,bo:+c.dataset.bo||1,lv:c.dataset.live==='1',st:'',r0:(w.querySelector('.rel')||{}).textContent}});
@@ -583,7 +588,7 @@ def build():
             W(f"t/{sl}.html",page(L['t_title'].format(n=tr(n)),b,1,path=f"t/{sl}.html",desc=L['t_desc'].format(n=tr(n)),ld=events_ld(v['up']+v['done'],url)))
             if lg=='en': open(f"{OUT}/cal/t/{sl}.ics","w",newline="").write(ics(n,[s for s in v['up']+v['done'] if s['pair']!={'tbd'}],url))
         act=lambda v:max(x['start'] for x in v['up']+v['done'])
-        lst="".join(f"<div class='m tl'><div class=tag>{L['tl_counts'].format(u=len(v['up']),d=len(v['done']))}</div><div class=tlh><span class=teams><a class=tla href='t/{slug(TN[k])}.html'>{hn(TN[k])}</a>{f'<span class=tier>T{TT[k]}</span>' if TT.get(k) else ''}</span>{cal_link(f'cal/t/{slug(TN[k])}.ics',False)}</div></div>" for k,v in sorted(tours.items(),key=lambda kv:-act(kv[1])))
+        lst="".join(f"<div class='m tl'><div class=tag>{L['tl_counts'].format(u=len(v['up']),d=len(v['done']))}{fd(v['up'])}</div><div class=tlh><span class=teams><a class=tla href='t/{slug(TN[k])}.html'>{hn(TN[k])}</a>{f'<span class=tier>T{TT[k]}</span>' if TT.get(k) else ''}</span>{cal_link(f'cal/t/{slug(TN[k])}.ics',False)}</div></div>" for k,v in sorted(tours.items(),key=lambda kv:-act(kv[1])))
         W("tournaments.html",page(L['tours_title'],f"<h1>{L['tournaments']}</h1>"+lst,0,"tournaments.html",path="tournaments.html",desc=L['tours_desc']))
         for k,v in tm.items():
             n=TEAMS[k]; sl=slug(n); url=f"{LROOT}team/{sl}.html"
@@ -593,7 +598,7 @@ def build():
                +sect(L['recs'],section(v['done'],'done',1,False),L['recs_empty'],"h-done"))
             W(f"team/{sl}.html",page(L['team_title'].format(n=tr(n)),b,1,path=f"team/{sl}.html",desc=L['team_desc'].format(n=tr(n)),ld=events_ld(v['up']+v['done'],url)))
             if lg=='en': open(f"{OUT}/cal/team/{sl}.ics","w",newline="").write(ics(n,v['up']+v['done'],url))  # hidden later-round matches are not in v['up']
-        tl="".join(f"<li data-teams={k} data-search=\"{e(both(TEAMS[k]))}\">{star(k,TEAMS[k])}<a href='team/{slug(TEAMS[k])}.html'>{hn(TEAMS[k])}</a>{'<span class=tag>'+(L['teams_up1'] if len(tm[k]['up'])==1 else L['teams_up'].format(u=len(tm[k]['up'])))+'</span>' if tm[k]['up'] else ''}</li>" for k in sorted(tm,key=lambda k:(not tm[k]['up'],TEAMS[k].lower())))
+        tl="".join(f"<li data-teams={k} data-search=\"{e(both(TEAMS[k]))}\">{star(k,TEAMS[k])}<a href='team/{slug(TEAMS[k])}.html'>{hn(TEAMS[k])}</a>{'<span class=tag>'+(L['teams_up1'] if len(tm[k]['up'])==1 else L['teams_up'].format(u=len(tm[k]['up'])))+fd(tm[k]['up'])+'</span>' if tm[k]['up'] else ''}</li>" for k in sorted(tm,key=lambda k:(not tm[k]['up'],TEAMS[k].lower())))
         W("teams.html",page(L['teams_title'],f"<h1>{L['teams']}</h1><p class=tag>{L['teams_intro']}</p><label for=tq class=sr>{L['tq']}</label><input id=tq class=tq type=search placeholder='{L['tq']}' autocomplete=off><ul class=teamlist id=teamlist>"+tl+"</ul>",0,"teams.html",path="teams.html",desc=L['teams_desc']))
         W("about.html",page(L['about_title'],L['about_body'].replace('{built}',f"{dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M}")+signup(),0,"about.html",path="about.html",desc=L['about_desc']))
         if lg=='en': W("404.html",page({'en':'Page not found | NoSpoilDota','es':'Página no encontrada | NoSpoilDota','pt':'Página não encontrada | NoSpoilDota'}[lg],
