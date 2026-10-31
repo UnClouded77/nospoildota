@@ -2,7 +2,7 @@
 """NoSpoilDota static site builder. Usage: python3 build.py  -> writes ./site/
 Data: OpenDota /proMatches (finished maps) + Liquipedia MatchTicker via the parse API
 (upcoming/live + tiers, CC-BY-SA 3.0; ONE request per build with an identifying UA, cached 1h)."""
-import sys,base64,json, re, time, html, os, urllib.request, urllib.parse, datetime as dt, hashlib, unicodedata
+import sys,base64,json, re, time, html, os, urllib.request, urllib.parse, datetime as dt, hashlib, unicodedata, shutil
 from collections import defaultdict
 ROOT=os.path.dirname(os.path.abspath(__file__)); OUT=os.path.join(ROOT,'site'); CACHE=os.path.join(ROOT,'cache')
 UA="NoSpoilDota/0.2 (https://nospoildota.com/; https://github.com/UnClouded77/nospoildota; non-commercial)"
@@ -197,8 +197,12 @@ document.querySelectorAll('.byday').forEach(box=>{let last='';[...box.children].
  const k=new Date(+w.dataset.ts*1000).toDateString();if(k!==last){last=k;const h=document.createElement('h3');h.className='day';
  h.textContent=new Intl.DateTimeFormat(LOC, {weekday:'long',month:'long',day:'numeric'}).format(new Date(+w.dataset.ts*1000));box.insertBefore(h,c)}})});
 const tz=document.getElementById('tzname');if(tz)tz.textContent=Intl.DateTimeFormat().resolvedOptions().timeZone||T.tz;
+function build(r){let g=[];try{g=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(r.dataset.g),x=>x.charCodeAt(0))))}catch(_){}const M=document.getElementById('main').dataset,b64=x=>btoa(String.fromCharCode(...new TextEncoder().encode(x))),f=document.createDocumentFragment();
+ g.forEach(([id,w,l],i)=>{const sp=document.createElement('span'),cd=document.createElement('code'),cp=document.createElement('button'),wr=document.createElement('button');sp.className='rp';cd.textContent=id;
+  cp.className='btn ghost mini copy';cp.dataset.copy=id;cp.textContent=M.cp;wr.type='button';wr.className='btn ghost mini wres';wr.dataset.w=w?b64(w):'';wr.dataset.l=w?b64(l):'';wr.setAttribute('aria-live','polite');wr.textContent=M.sr;
+  sp.append(M.rp.replace('{i}',i+1)+' ',cd,' ',cp,' ',wr);f.append(sp,document.createElement('br'))});r.prepend(f)}
 document.addEventListener('click',ev=>{const b=ev.target.closest('.reveal');if(b){const r=document.getElementById(b.dataset.for);
- if(!r.hidden){r.hidden=true;b.textContent=T.rv;b.setAttribute('aria-expanded','false')}else if(confirm(T.cf)){r.hidden=false;b.textContent=T.hd;b.setAttribute('aria-expanded','true')}return}
+ if(!r.hidden){r.hidden=true;b.textContent=T.rv;b.setAttribute('aria-expanded','false')}else if(confirm(T.cf)){if(r.dataset.g){build(r);delete r.dataset.g}r.hidden=false;b.textContent=T.hd;b.setAttribute('aria-expanded','true')}return}
  const st=ev.target.closest('.steams');if(st){const dec=x=>new TextDecoder().decode(Uint8Array.from(atob(x),y=>y.charCodeAt(0))),c=st.closest('.m');
  try{c.querySelector('.tn').innerHTML=dec(st.dataset.h);c.dataset.teams=dec(st.dataset.k);c.dataset.search+=' '+dec(st.dataset.q)}catch(_){}st.remove();paint();return}
  const w=ev.target.closest('.wres');if(w){if(w.dataset.done)return;w.dataset.done=1;let n='';try{n=new TextDecoder().decode(Uint8Array.from(atob(w.dataset.w),x=>x.charCodeAt(0)))}catch(_){}
@@ -384,9 +388,9 @@ def page(title,body,depth=0,cur=None,path="",desc=None,ld=None,nolist=False):
     hint="".join(f"<p id={x}hint class=note lang={HLANG[x]} hidden>{HINTS[x].format(u='/'+PFX[x]+path).replace('<a ',f'<a data-lg={x} ')}</p>" for x in ('es','pt') if x!=LG and not (x=='es' and LG!='en'))
     alt="".join(f'<link rel=alternate hreflang={HLANG[x]} href="{SITE+PFX[x]+path}">' for x in LANGS)+f'<link rel=alternate hreflang=x-default href="{SITE+path}">'
     return f"""<!doctype html><html lang={HLANG[LG]}><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>{e(title)}</title>{LANG_JS.replace("@L",'404' if nolist else LG)}
-<meta name=description content="{e(desc)}"><link rel=canonical href="{can}">{alt}<meta property=og:type content=website><meta property=og:site_name content=NoSpoilDota><meta property=og:locale content={L['locale']}><meta property=og:title content="{e(title)}"><meta property=og:description content="{e(desc)}"><meta property=og:url content="{can}"><meta name=twitter:card content=summary><meta name=color-scheme content=dark>{ldj}<link rel=stylesheet href="{r}style.css?v={ASSET_V}"></head><body>
+<meta name=description content="{e(desc)}"><link rel=canonical href="{can}">{alt}<meta property=og:type content=website><meta property=og:site_name content=NoSpoilDota><meta property=og:locale content={L['locale']}><meta property=og:title content="{e(title)}"><meta property=og:description content="{e(desc)}"><meta property=og:url content="{can}"><meta property=og:image content="{SITE}og.png"><meta property=og:image:width content=1200><meta property=og:image:height content=630><meta property=og:image:alt content="NoSpoilDota: Pro Dota 2 schedule &amp; replays, spoiler-free"><meta name=twitter:card content=summary_large_image><meta name=twitter:image content="{SITE}og.png"><link rel=icon href="/favicon.ico" sizes=32x32><link rel=icon href="/icon.svg" type="image/svg+xml"><link rel=apple-touch-icon href="/apple-touch-icon.png"><link rel=manifest href="/site.webmanifest"><meta name=theme-color content="#0f1115"><meta name=color-scheme content=dark>{ldj}<link rel=stylesheet href="{r}style.css?v={ASSET_V}"></head><body>
 <a class=skip href="#main">{L['skip']}</a><header><a class=logo href="{p}index.html">NoSpoil<span>Dota</span></a>{sw}<nav aria-label={L['main_nav']}>{nav}</nav></header>
-<main id=main>{hint}{body}</main><footer>{L['foot'].format(p=p)}</footer><script src="{r}app.js?v={ASSET_V}" defer></script><script data-goatcounter="https://nospoildota.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script></body></html>"""
+<main id=main data-rp="{e(L['replay'])}" data-cp="{e(L['copy'])}" data-sr="{e(L['showres'])}">{hint}{body}</main><footer>{L['foot'].format(p=p)}</footer><script src="{r}app.js?v={ASSET_V}" defer></script><script data-goatcounter="https://nospoildota.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script></body></html>"""
 PAGES=[]
 HANDLE={'twitch':r'[A-Za-z0-9_]{3,25}','kick':r'[A-Za-z0-9_-]{3,40}','youtube':r'@?[A-Za-z0-9_.-]{3,40}|channel/UC[A-Za-z0-9_-]{22}'}
 def stream_url(pl,ch):
@@ -481,11 +485,13 @@ def card(s,d,ctx,TEAMS):
     attrs=f"class=m{' data-bo='+str(s['bo'])+(' data-live=1' if live else '') if ctx=='up' else ''} data-tier={s.get('tier') or 9} data-teams=\"{'' if hid else ' '.join(sorted(s['pair']-{'tbd'}))}\" data-search=\"{e(both(s['tname']) if hid else both(a)+' '+both(b)+' '+both(s['tname']))}\""
     if ctx=='up':
         return f"<div {attrs}>{head}<div class=acts>{watch_links(s,'btn ghost strm',2)}</div></div>"
-    maps="<br>".join(f"<span class=rp>{L['replay'].format(i=i+1)} <code>{m['id']}</code> <button class='btn ghost mini copy' data-copy={m['id']}>{L['copy']}</button> <button type=button class='btn ghost mini wres' data-w=\"{base64.b64encode(tr(TEAMS.get(team_key(m['w']),m['w'])).encode()).decode() if m.get('w') else ''}\" data-l=\"{base64.b64encode(tr(next((x for x in (a,b) if team_key(x)!=team_key(m['w'])),'')).encode()).decode() if m.get('w') else ''}\" aria-live=polite>{L['showres']}</button></span>"
-                  for i,m in enumerate(sorted(s['maps'],key=lambda m:m['t'])))
-    maps+=f"<br><span class=tag>{L['client']}</span>"
+    # Per-game rows are built by app.js only on Reveal; the blob is padded so its length doesn't hint at the game count.
+    g=[[str(m['id']),tr(TEAMS.get(team_key(m['w']),m['w'])) if m.get('w') else '',tr(next((x for x in (a,b) if team_key(x)!=team_key(m['w'])),'')) if m.get('w') else '']
+       for m in sorted(s['maps'],key=lambda m:m['t'])]
+    js=json.dumps(g,ensure_ascii=False); n=max(s['bo']*160,len(js.encode())); n=-(-n//256)*256
+    js+=' '*(n-len(js.encode()))
     return (f"<div {attrs}>{head}<div class=acts><button class='btn reveal' data-for={uid} aria-expanded=false aria-controls={uid}>{L['reveal']}</button></div>"
-            f"<div class=res id={uid} hidden>{maps}</div></div>")
+            f"<div class=res id={uid} data-g=\"{base64.b64encode(js.encode()).decode()}\" hidden><span class=tag>{L['client']}</span></div></div>")
 def tbd_block(items):
     if not items: return ""
     li="".join(f"<li><span data-ts={s['start']} data-kind=up>{fdate(s['start'])}</span> · {' vs '.join(hn(t) for t in s['teams'])} · Bo{s['bo']}</li>" for s in sorted(items,key=lambda x:x['start']))
@@ -692,6 +698,7 @@ def build():
         for x in os.listdir(f"{OUT}/{d_}"):
             if x.rsplit('.',1)[0] not in keep[d_.split('/')[-1]]: os.remove(f"{OUT}/{d_}/{x}")
     open(f"{OUT}/style.css","w").write(CSS); open(f"{OUT}/app.js","w").write(JS)
+    for x in os.listdir(os.path.join(ROOT,'static')): shutil.copy(os.path.join(ROOT,'static',x),OUT)  # favicons, og.png, manifest
     lm=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d')
     def urlent(loc,p): return (f"<url><loc>{e(loc)}</loc><lastmod>{lm}</lastmod>"+"".join(f"<xhtml:link rel=\"alternate\" hreflang=\"{HLANG[x]}\" href=\"{e(SITE+PFX[x]+p)}\"/>" for x in LANGS)
         +f"<xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"{e(SITE+p)}\"/></url>")
