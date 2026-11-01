@@ -2,7 +2,7 @@
 """NoSpoilDota static site builder. Usage: python3 build.py  -> writes ./site/
 Data: OpenDota /proMatches (finished maps) + Liquipedia MatchTicker via the parse API
 (upcoming/live + tiers, CC-BY-SA 3.0; ONE request per build with an identifying UA, cached 1h)."""
-import sys,base64,json, re, time, html, os, urllib.request, urllib.parse, datetime as dt, hashlib, unicodedata, shutil
+import hashlib,sys,base64,json, re, time, html, os, urllib.request, urllib.parse, datetime as dt, hashlib, unicodedata, shutil
 from collections import defaultdict
 ROOT=os.path.dirname(os.path.abspath(__file__)); OUT=os.path.join(ROOT,'site'); CACHE=os.path.join(ROOT,'cache')
 UA="NoSpoilDota/0.2 (https://nospoildota.com/; https://github.com/UnClouded77/nospoildota; non-commercial)"
@@ -124,9 +124,9 @@ def fetch_upcoming():
     return res
 
 # ---------- presentation ----------
-CSS=""":root{--bg:#0f1115;--card:#181b22;--mut:#9aa3b5;--fg:#e8ebf1;--acc:#e0533d;--bd:#2a2f3a;--live:#e5302f}
+CSS=""":root{--bg:#0f1115;--card:#181b22;--mut:#9aa3b5;--fg:#e8ebf1;--acc:#e0533d;--bd:#2a2f3a;--live:#d42a29}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-a{color:#ff9a82;text-decoration:none}a:hover{text-decoration:underline}:focus-visible{outline:2px solid #ffb199;outline-offset:2px}
+a{color:#ff9a82;text-decoration:none}:is(main p,main li,footer) a:not([class]){text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;text-decoration-color:rgba(255,154,130,.5)}a:hover{text-decoration:underline}:focus-visible{outline:2px solid #ffb199;outline-offset:2px}
 .skip{position:absolute;left:-9999px}.skip:focus{left:8px;top:8px;background:#000;padding:6px;z-index:9}
 header{border-bottom:1px solid var(--bd);padding:10px 16px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:'logo nav lang';gap:6px 18px;align-items:center;width:100%;max-width:100%;position:sticky;top:0;background:#0f1115f2;z-index:5}
 header .logo{font-weight:800;font-size:19px;color:var(--fg)}header .logo span{color:var(--acc)}nav{display:flex;flex-wrap:wrap;gap:4px 14px}nav a{color:var(--mut)}nav a[aria-current]{color:var(--fg)}
@@ -341,6 +341,32 @@ STR={
  nl_foot="Grátis, um e-mail por semana, cancele quando quiser. Feito com <a href='https://buttondown.com'>Buttondown</a>.",
  hint='')}
 LANGS=('en','es','pt'); HLANG={'en':'en','es':'es','pt':'pt-BR'}; PFX={'en':'','es':'es/','pt':'pt/'}
+_LL="""# NoSpoilDota
+> {d}
+
+{p}
+
+## {sec}
+- [{m}](https://nospoildota.com/{x})
+- [{am}](https://nospoildota.com/{x}amateur.html)
+- [{t}](https://nospoildota.com/{x}tournaments.html)
+- [{tm}](https://nospoildota.com/{x}teams.html)
+- [{ab}](https://nospoildota.com/{x}about.html)
+
+## {lg}
+- English: https://nospoildota.com/
+- Español: https://nospoildota.com/es/
+- Português (Brasil): https://nospoildota.com/pt/
+
+## {cal}
+{calt}
+
+## Sitemap
+- https://nospoildota.com/sitemap.xml
+"""
+LLMS={'en':_LL.format(x='',d='Spoiler-free Dota 2 pro match schedule and replay finder.',p='Upcoming and live professional Dota 2 series in your time zone, official Twitch/YouTube/Kick channels (from Liquipedia) and replay IDs (from OpenDota). Never shows scores, winners or game counts; replay IDs stay hidden until revealed.',sec='Main sections',m='Matches',am='Amateur (Tier 3/4)',t='Tournaments',tm='Teams',ab='About',lg='Languages',cal='Calendar subscriptions',calt='Every tournament and team page has an .ics feed (https://nospoildota.com/cal/t/<tournament>.ics, https://nospoildota.com/cal/team/<team>.ics) with match times only, no results.'),
+'es':_LL.format(x='es/',d='Calendario de Dota 2 profesional y buscador de repeticiones sin spoilers.',p='Series profesionales de Dota 2 próximas y en vivo en tu zona horaria, canales oficiales de Twitch/YouTube/Kick (de Liquipedia) e IDs de repetición (de OpenDota). Nunca muestra marcadores, ganadores ni cantidad de juegos.',sec='Secciones',m='Partidas',am='Amateur (Tier 3/4)',t='Torneos',tm='Equipos',ab='Acerca de',lg='Idiomas',cal='Suscripciones de calendario',calt='Cada torneo y equipo tiene un feed .ics (https://nospoildota.com/cal/t/<torneo>.ics, https://nospoildota.com/cal/team/<equipo>.ics) solo con horarios, sin resultados.'),
+'pt':_LL.format(x='pt/',d='Agenda de Dota 2 profissional e localizador de replays sem spoilers.',p='Séries profissionais de Dota 2 ao vivo e futuras no seu fuso, canais oficiais da Twitch/YouTube/Kick (da Liquipedia) e IDs de replay (do OpenDota). Nunca mostra placares, vencedores ou número de jogos.',sec='Seções',m='Partidas',am='Amador (Tier 3/4)',t='Torneios',tm='Times',ab='Sobre',lg='Idiomas',cal='Assinaturas de agenda',calt='Cada torneio e time tem um feed .ics (https://nospoildota.com/cal/t/<torneio>.ics, https://nospoildota.com/cal/team/<time>.ics) só com horários, sem resultados.')}
 HINTS={'es':'¿Prefieres español? <a href="{u}">Ver esta página en español →</a>','pt':'Prefere português? <a href="{u}">Ver esta página em português →</a>'}
 LG='en'; L=STR['en']; RP=''; LROOT=SITE
 CJK=re.compile(r'[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff]')
@@ -368,7 +394,7 @@ def fdate(ts):
 def cal_link(rel,fb=True):
     """Subscribe via webcal:// (phones open the calendar app) plus a small https .ics fallback."""
     return (f"<span class=cals><a class=cal href='webcal://nospoildota.com/{rel}' title='{L['cal_t']}'><span aria-hidden=true>📅</span> {L['cal']}</a>"
-            +(f"<a class=calf href='/{rel}' title='{L['cal_t']}' aria-label='{L['cal']} (.ics)'>.ics</a>" if fb else "")+"</span>")
+            +(f"<a class=calf href='/{rel}' title='{L['cal_t']}' aria-label='.ics: {L['cal']}'>.ics</a>" if fb else "")+"</span>")
 ASSET_V=hashlib.md5((CSS+JS).encode()).hexdigest()[:10]
 BD="nospoildota"
 def signup(compact=True):
@@ -705,11 +731,21 @@ def build():
             if x.rsplit('.',1)[0] not in keep[d_.split('/')[-1]]: os.remove(f"{OUT}/{d_}/{x}")
     open(f"{OUT}/style.css","w").write(CSS); open(f"{OUT}/app.js","w").write(JS)
     for x in os.listdir(os.path.join(ROOT,'static')): shutil.copy(os.path.join(ROOT,'static',x),OUT)  # favicons, og.png, manifest
-    lm=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d')
-    def urlent(loc,p): return (f"<url><loc>{e(loc)}</loc><lastmod>{lm}</lastmod>"+"".join(f"<xhtml:link rel=\"alternate\" hreflang=\"{HLANG[x]}\" href=\"{e(SITE+PFX[x]+p)}\"/>" for x in LANGS)
+    today=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d'); lmp=os.path.join(CACHE,'lastmod.json')
+    try: LM=json.load(open(lmp))
+    except Exception: LM={}
+    def lastmod(loc):  # per-URL lastmod: date its content (minus volatile build stamps) last changed
+        f=OUT+'/'+loc[len(SITE):]; f=f+'index.html' if f.endswith('/') else f
+        try: h=hashlib.sha1(re.sub(rb'\d{4}-\d\d-\d\dT[\d:.]+Z?|data-gen=\S+',b'',open(f,'rb').read())).hexdigest()
+        except OSError: return today
+        if LM.get(loc,{}).get('h')!=h: LM[loc]={'h':h,'d':today}
+        return LM[loc]['d']
+    def urlent(loc,p): return (f"<url><loc>{e(loc)}</loc><lastmod>{lastmod(loc)}</lastmod>"+"".join(f"<xhtml:link rel=\"alternate\" hreflang=\"{HLANG[x]}\" href=\"{e(SITE+PFX[x]+p)}\"/>" for x in LANGS)
         +f"<xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"{e(SITE+p)}\"/></url>")
     open(f"{OUT}/sitemap.xml","w").write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">'
         +"".join(urlent(SITE+PFX[x]+p,p) for p in PAGES for x in LANGS)+"</urlset>\n")
+    json.dump(LM,open(lmp,'w'))
+    for x in LANGS: os.makedirs(OUT+'/'+PFX[x],exist_ok=True); open(f"{OUT}/{PFX[x]}llms.txt","w").write(LLMS[x])
     open(f"{OUT}/robots.txt","w").write(f"User-agent: *\nAllow: /\nSitemap: {SITE}sitemap.xml\n")
     open(f"{OUT}/CNAME","w").write("nospoildota.com\n")
     stats={"opendota_maps":len(raw),"opendota_series":len(recent),"liquipedia_upcoming":len(up),"live":len(live),"upcoming_7d":len(soon),
