@@ -118,7 +118,7 @@ def fetch_upcoming():
             if key in seen: continue
             seen.add(key)
             res.append({"teams":teams,"league":html.unescape(tn.group(1)),"lp":tl.group(1) if tl else None,"start":t,
-                        "bo":int(bo.group(1)) if bo else 1,"tier":int(tier),"streams":streams,
+                        "bo":int(bo.group(1)) if bo else 1,"tier":int(tier),"lpst":streams,
                         "stage":urllib.parse.unquote(stg.group(1)).replace('_',' ') if stg else '',"rnd":int(rid.group(2)) if rid else None,
                         "mid":rid.group(0) if rid else None})
     return res
@@ -403,7 +403,7 @@ FALLBACK=[(('the international','valve','dota2ti'),[('twitch','dota2ti'),('youtu
   (('pgl',),[('twitch','pgl_dota2'),('youtube','PGL_Dota2'),('kick','pgldota2')]),
   (('dreamleague','esl'),[('twitch','esl_dota2'),('youtube','ESLDota2')]),
   (('blast',),[('twitch','blastdota'),('youtube','BLASTDota'),('kick','blastdota')]),
-  (('fissure',),[('twitch','fissure_dota_en'),('youtube','fiss_dota2_en'),('kick','fissure_dota_en')]),
+  (('fissure',),[('kick','fissure_dota_en'),('youtube','fiss_dota2_en')]),  # FISSURE EN moved to Kick; twitch.tv/fissure_dota_en is a dead 2025 channel
   (('pari',),[('youtube','PARIEsportsDOTA2')]),
   (('epicenter',),[('twitch','epicenter_en1')]),
   (('betboom',),[('youtube','BetBoomEsports')]),
@@ -434,7 +434,7 @@ def fetch_tour_streams(pages):
 def pick_streams(name,org,st):
     prim=[(a,b) for a,b,p in st if p]; sec=[(a,b) for a,b,p in st if not p]; st=prim
     hay=f"{name} {org}".lower()
-    for keys,chans in FALLBACK:
+    for keys,chans in ([] if prim else FALLBACK):  # curated channels only when Liquipedia lists no main channel (never override it)
         if any(re.search(r'\b'+re.escape(k)+r'\b',hay) for k in keys):
             for c in chans:
                 if c[0] not in [x[0] for x in st]: st.append(c)
@@ -442,6 +442,12 @@ def pick_streams(name,org,st):
     order={'twitch':0,'youtube':1,'kick':2}
     # main/official tier (Liquipedia slot 1 + curated organizer channels) always ahead of secondary channels, any platform
     return sorted(st,key=lambda c:order[c[0]])+[c for c in sec if c not in st]
+def match_streams(ms,st):
+    """Per-match channel from Liquipedia's match row (parallel streams) goes first; tournament list otherwise."""
+    nk=lambda x:re.sub(r'[^a-z0-9]','',x.lower())
+    want={(pl,nk(urllib.parse.unquote(n))) for pl,n in ms}
+    hit=[c for c in st if (c[0],nk(c[1])) in want]
+    return hit+[c for c in st if c not in hit] if hit else st
 PL={'twitch':'Twitch','youtube':'YouTube','kick':'Kick'}
 def is_pt(ch): return bool(re.search(r'(^|[_.-])(pt|br|ptbr|pt_br|bra)([_.-]|\d*$)|brasil|brazil|ptbr',ch.lower()))
 def is_es(ch): return bool(re.search(r'(^|[_.-])(es|esp|spa|spanish|latam|lat)([_.-]|\d*$)|espanol|español',ch.lower()))
@@ -594,7 +600,7 @@ def build():
     for s in up+recent:
         k=tour_key(s['league']); s['tk']=k; s['tname']=TN[k]; s['tier']=TT.get(k) or s.get('tier')
         s['teams']=['TBD' if team_key(t)=='tbd' else TEAMN[team_key(t)] for t in s['teams']]; s['pair']=frozenset(map(team_key,s['teams']))
-        s['streams']=TS.get(k,[])
+        s['streams']=match_streams(s.get('lpst') or [],TS.get(k,[]))
     # One series = one place: a Liquipedia match with OpenDota maps already (same teams, start within 3h) is LIVE and hidden from "finished".
     used=set()
     for s in up:
