@@ -3,7 +3,9 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '17 */2 * * *'
+    # GitHub often drops scheduled runs (we saw 5-9h gaps), so ask twice an hour;
+    # Liquipedia stays cached for an hour, so this doesn't add API load there.
+    - cron: '17,47 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
