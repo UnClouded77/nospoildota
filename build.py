@@ -99,27 +99,62 @@ def fetch_upcoming():
         h=get("https://liquipedia.net/dota2/api.php","lp_tiers.json",ttl=3600,data=data)['parse']['text']['*']
     except Exception as x:
         print("Liquipedia failed:",x); return []
+    return parse_ticker(h)
+_CARD=re.compile(r'<div class="match-info">|<div class="match-ticker-card">')
+def _strip(s): return html.unescape(re.sub(r'<[^>]+>',' ',s or '')).split()
+def _parse_card(blk):
+    """New (Nov 2026) MatchTicker card markup -> (ts, teams, league, lp, anchor, header label)."""
+    blk=blk.replace('&#95;','_')
+    ts=re.search(r'data-timestamp="(\d+)"',blk)
+    hd=re.split(r'<div class="match-ticker-card__opponents?"',blk,maxsplit=1)[0]
+    hd=re.sub(r'<span class="match-info-countdown">.*?</span>\s*</span>','',hd,flags=re.S)  # drop the timer text
+    label=' '.join(_strip(hd.split('match-ticker-card__header',1)[-1].split('>',1)[-1]))
+    teams=[]
+    for op in re.split(r'class="match-ticker-card__opponent"',blk)[1:3]:
+        op=op.split('match-ticker-card-tournament',1)[0]
+        nm=''
+        for c in ('team-name','team-bracketname','team-shortname'):
+            m=re.search(r'class="'+c+r'"[^>]*>(.*?)</div>',op,re.S)
+            if m and ' '.join(_strip(m.group(1))): nm=' '.join(_strip(m.group(1))); break
+        if not nm:
+            m=re.search(r'class="name[^"]*"[^>]*>\s*<a [^>]*title="([^"]+)"',op)
+            if m: nm=re.sub(r'\s*\((page does not exist|stack|team)\)','',html.unescape(m.group(1)))
+        teams.append(nm.strip() or 'TBD')
+    tn=re.search(r'match-ticker-card-tournament-name"[^>]*>\s*<a href="(/dota2/[^"#]+)(?:#([^"]*))?"[^>]*>(.*?)</a>',blk,re.S)
+    league=' '.join(_strip(tn.group(3))) if tn else ''
+    return ts,teams,league,(tn.group(1) if tn else None),(tn.group(2) if tn else None),label,blk
+def _parse_old(blk):
+    ts=re.search(r'data-timestamp="(\d+)"',blk)
+    names=re.findall(r'<span class="name"[^>]*>(?:<a [^>]*title="([^"]+)"[^>]*>)?([^<]*)',blk)
+    tn=re.search(r'match-info-tournament-name"><a [^>]*><span>([^<]+)',blk)
+    tl=re.search(r'match-info-tournament-name"><a href="(/dota2/[^"#]+)',blk)
+    stg=re.search(r'match-info-tournament-name"><a href="/dota2/[^"#]*#([^"]+)"',blk)
+    teams=[(html.unescape(re.sub(r'\s*\((page does not exist|stack)\)','',re.sub(r'\s*\(page does not exist\)','',a))) or b).strip() or 'TBD' for a,b in names][:2]
+    return ts,teams,(html.unescape(tn.group(1)) if tn else ''),(tl.group(1) if tl else None),(stg.group(1) if stg else None),'',blk
+def parse_ticker(h):
+    """Parse the per-tier MatchTicker HTML. Supports the old `match-info` blocks and the new `match-ticker-card` cards."""
     res=[]; seen=set()
     parts=re.split(r'<div id="nsd-tier-(\d)">',h)
     for tier,chunk in zip(parts[1::2],parts[2::2]):
-        for blk in chunk.split('<div class="match-info">')[1:]:
-            ts=re.search(r'data-timestamp="(\d+)"',blk)
-            names=re.findall(r'<span class="name"[^>]*>(?:<a [^>]*title="([^"]+)"[^>]*>)?([^<]*)',blk)
-            tn=re.search(r'match-info-tournament-name"><a [^>]*><span>([^<]+)',blk)
-            tl=re.search(r'match-info-tournament-name"><a href="(/dota2/[^"#]+)',blk)
-            bo=re.search(r'\(Bo(\d)\)',blk)
-            stg=re.search(r'match-info-tournament-name"><a href="/dota2/[^"#]*#([^"]+)"',blk)
-            rid=re.search(r'Match:ID_([A-Za-z0-9]+)_R(\d+)-M(\d+)',blk)
-            if not ts or not tn: continue
-            teams=[(html.unescape(re.sub(r'\s*\((page does not exist|stack)\)','',re.sub(r'\s*\(page does not exist\)','',a))) or b).strip() or 'TBD' for a,b in names][:2]
+        pieces=_CARD.split(chunk); kinds=_CARD.findall(chunk)
+        for kind,blk in zip(kinds,pieces[1:]):
+            ts,teams,league,lp,anchor,label,blk=(_parse_old if 'match-info' in kind else _parse_card)(blk)
+            if not ts or not league: continue
             while len(teams)<2: teams.append('TBD')
+            bo=re.search(r'\(Bo(\d)\)',blk) or re.search(r'\bBo(\d)\b',label)
+            rid=re.search(r'Match:ID_([A-Za-z0-9]+)_R(\d+)-M(\d+)',blk)
             streams=sorted(set(re.findall(r'href="/dota2/Special:Stream/([a-z]+)/([^"]+)"',blk)))
-            t=int(ts.group(1)); key=(t,tuple(team_key(x) for x in teams),tour_key(tn.group(1)))
+            # stage: tournament-link anchor (e.g. Group_A / Playoffs) plus the card header label (e.g. "Upper Bracket Final"),
+            # so the bracket/spoiler check sees both
+            lab=re.sub(r'\s*[-–·|]?\s*\bBo\d\b\s*','',label).strip(' -–·|')
+            stage=[urllib.parse.unquote(anchor).replace('_',' ').strip()] if anchor else []
+            if lab and lab.lower() not in [x.lower() for x in stage]: stage.append(lab)
+            t=int(ts.group(1)); key=(t,tuple(team_key(x) for x in teams[:2]),tour_key(league))
             if key in seen: continue
             seen.add(key)
-            res.append({"teams":teams,"league":html.unescape(tn.group(1)),"lp":tl.group(1) if tl else None,"start":t,
+            res.append({"teams":teams[:2],"league":league,"lp":lp,"start":t,
                         "bo":int(bo.group(1)) if bo else 1,"tier":int(tier),"lpst":streams,
-                        "stage":urllib.parse.unquote(stg.group(1)).replace('_',' ') if stg else '',"rnd":int(rid.group(2)) if rid else None,
+                        "stage":' · '.join(stage),"rnd":int(rid.group(2)) if rid else None,
                         "mid":rid.group(0) if rid else None})
     return res
 
