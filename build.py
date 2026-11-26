@@ -100,7 +100,7 @@ def fetch_upcoming():
     except Exception as x:
         print("Liquipedia failed:",x); return []
     return parse_ticker(h)
-_CARD=re.compile(r'<div class="match-info">|<div class="match-ticker-card">')
+_CARD=re.compile(r'<div class="match-info(?:\s[^"]*)?"[^>]*>|<div class="match-ticker-card(?:\s[^"]*)?"[^>]*>')  # extra attrs ok (data-match-timestamp, …)
 def _strip(s): return html.unescape(re.sub(r'<[^>]+>',' ',s or '')).split()
 def _parse_card(blk):
     """New (Nov 2026) MatchTicker card markup -> (ts, teams, league, lp, anchor, header label)."""
